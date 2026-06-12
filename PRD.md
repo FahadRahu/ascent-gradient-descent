@@ -205,7 +205,7 @@ Separate by **value + saturation**, not hue alone. Halo `emissiveIntensity ≈ 1
 
 ### 5.4 Bloom + tone mapping + grade recipe
 
-**Pipeline order (locked):** `HalfFloatType EffectComposer` → render scene in linear HDR → **Bloom (mipmapBlur)** → **N8AO** → **DOF** → **SMAA** → **Vignette** → **ChromaticAberration** → **Noise (grain)** → **ToneMapping/OutputPass (AGX) LAST**. Tone mapping last so bloom accumulates in linear HDR before the filmic rolloff.
+**Pipeline order (locked):** `HalfFloatType EffectComposer` → render scene in linear HDR → **N8AO** (ambient occlusion applied to the lit scene first, so darkened crevices don't bloom) → **Bloom (mipmapBlur)** → **DOF** → **SMAA** → **Vignette** → **ChromaticAberration** → **Noise (grain)** → **ToneMapping/OutputPass (AGX) LAST**. Tone mapping last so bloom accumulates in linear HDR before the filmic rolloff.
 
 ```js
 renderer.toneMapping = THREE.AgXToneMapping;   // preserves hue/saturation at top end — neon stays colored, not clipped white
