@@ -1,0 +1,87 @@
+import type { GradFn, Optimizer, OptimizerState, Vec2 } from './types';
+
+export interface StepperConfig {
+  optimizer: Optimizer;
+  grad: GradFn;
+  theta0: Vec2;
+  /** Fixed simulation timestep in seconds (one optimizer step per dt). */
+  dt: number;
+}
+
+/** A single recorded frame of the descent, for the iteration scrubber (M1). */
+export interface HistoryEntry {
+  iteration: number;
+  theta: Vec2;
+  cost?: number;
+}
+
+export interface Stepper {
+  readonly theta: Vec2;
+  readonly iteration: number;
+  /** Fractional progress toward the next step (0..1) for render interpolation. */
+  readonly alpha: number;
+  readonly diverged: boolean;
+  readonly history: readonly HistoryEntry[];
+  /** Advance simulation time by `elapsed` seconds, taking whole steps. */
+  advance(elapsed: number): void;
+  /** Reset to the initial point and clear state/history. */
+  reset(): void;
+}
+
+/**
+ * Fixed-timestep accumulator (PRD §8.3): accumulates real elapsed time and
+ * takes deterministic whole optimizer steps when it crosses dt, so behavior is
+ * refresh-rate independent. Guards non-finite values (PRD §4.4): on NaN/Inf it
+ * retains the last finite point, flags `diverged`, and stops stepping.
+ */
+export function createStepper(config: StepperConfig): Stepper {
+  const { optimizer, grad, theta0, dt } = config;
+
+  let theta: Vec2 = theta0;
+  let state: OptimizerState = optimizer.init(theta0);
+  let accumulator = 0;
+  let diverged = false;
+  let history: HistoryEntry[] = [{ iteration: 0, theta: theta0 }];
+
+  const isFinitePair = (v: Vec2): boolean => Number.isFinite(v[0]) && Number.isFinite(v[1]);
+
+  return {
+    get theta() {
+      return theta;
+    },
+    get iteration() {
+      return state.iteration;
+    },
+    get alpha() {
+      return Math.min(accumulator / dt, 1);
+    },
+    get diverged() {
+      return diverged;
+    },
+    get history() {
+      return history;
+    },
+    advance(elapsed: number) {
+      if (diverged) return;
+      accumulator += elapsed;
+      while (accumulator >= dt) {
+        accumulator -= dt;
+        const result = optimizer.step(theta, grad, state);
+        if (!isFinitePair(result.theta)) {
+          diverged = true; // keep the last finite theta; stop
+          return;
+        }
+        theta = result.theta;
+        state = result.state;
+        history.push({ iteration: state.iteration, theta });
+      }
+    },
+    reset() {
+      theta = theta0;
+      state = optimizer.init(theta0);
+      accumulator = 0;
+      diverged = false;
+      history = [{ iteration: 0, theta: theta0 }];
+    },
+  };
+}
