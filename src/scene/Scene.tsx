@@ -29,9 +29,12 @@ export function SceneContents() {
       <fogExp2 attach="fog" args={[0x0b0e1a, 0.08]} />
 
       <Lights />
-      {/* M1a default: procedural environment (no network/HDR fetch). The HDR
-          path is swappable via mode and exercised in M1b. */}
-      <SceneEnvironment mode="procedural" />
+      {/* M1a environment: self-hosted dark-studio HDRI (PRD §6.2). Chosen at the
+          Task-15 lighting A/B over the procedural Lightformer rig — the HDR reads
+          as pure magma (no cyan clearcoat sheen competing with the colormap). The
+          procedural mode stays available via the swappable <SceneEnvironment>
+          boundary (mode="procedural") for the M1b post-stack revisit. */}
+      <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />
 
       <Surface />
       <DescentBall />
