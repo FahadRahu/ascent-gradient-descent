@@ -38,16 +38,17 @@ export function makeNadam(hp: NadamHyperparams = NADAM_DEFAULTS): Optimizer {
       ];
       const bc1 = 1 - Math.pow(hp.beta1, t);
       const bc2 = 1 - Math.pow(hp.beta2, t);
-      const numer = (i: number): number =>
-        hp.beta1 * (m[i] / bc1) + ((1 - hp.beta1) * g[i]) / bc1;
+      const mHat: Vec2 = [m[0] / bc1, m[1] / bc1];
+      const vHat: Vec2 = [v[0] / bc2, v[1] / bc2];
+      const numer = (i: number): number => hp.beta1 * mHat[i] + ((1 - hp.beta1) * g[i]) / bc1;
       const next: Vec2 = [
-        theta[0] - (hp.lr / (Math.sqrt(v[0] / bc2) + hp.eps)) * numer(0),
-        theta[1] - (hp.lr / (Math.sqrt(v[1] / bc2) + hp.eps)) * numer(1),
+        theta[0] - (hp.lr / (Math.sqrt(vHat[0]) + hp.eps)) * numer(0),
+        theta[1] - (hp.lr / (Math.sqrt(vHat[1]) + hp.eps)) * numer(1),
       ];
       return {
         theta: next,
         state: { ...state, iteration: t, m, v },
-        aux: { m, v, gradient: g },
+        aux: { mHat, vHat, gradient: g },
       };
     },
   };

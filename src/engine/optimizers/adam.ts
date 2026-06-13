@@ -34,14 +34,16 @@ export function makeAdam(hp: AdamHyperparams = ADAM_DEFAULTS): Optimizer {
       ];
       const bc1 = 1 - Math.pow(hp.beta1, t);
       const bc2 = 1 - Math.pow(hp.beta2, t);
+      const mHat: Vec2 = [m[0] / bc1, m[1] / bc1];
+      const vHat: Vec2 = [v[0] / bc2, v[1] / bc2];
       const next: Vec2 = [
-        theta[0] - (hp.lr * (m[0] / bc1)) / (Math.sqrt(v[0] / bc2) + hp.eps),
-        theta[1] - (hp.lr * (m[1] / bc1)) / (Math.sqrt(v[1] / bc2) + hp.eps),
+        theta[0] - (hp.lr * mHat[0]) / (Math.sqrt(vHat[0]) + hp.eps),
+        theta[1] - (hp.lr * mHat[1]) / (Math.sqrt(vHat[1]) + hp.eps),
       ];
       return {
         theta: next,
         state: { ...state, iteration: t, m, v },
-        aux: { m, v, gradient: g },
+        aux: { mHat, vHat, gradient: g },
       };
     },
   };
