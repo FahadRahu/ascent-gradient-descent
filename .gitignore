@@ -12,3 +12,4 @@ coverage
 
 # Playwright-MCP browser-verification artifacts (screenshots, snapshots, logs)
 m1a-*.png
+ab-*.png
