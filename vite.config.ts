@@ -23,8 +23,9 @@ export default defineConfig({
     environment: 'node',
     setupFiles: ['./vitest.setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
-    // No engine tests exist yet at this commit (Tasks 4+ add them); the harness
-    // must still exit 0 so the M0 `npm test` gate passes during bootstrap.
+    // M0 foundation has no engine tests yet (they land in Tasks 4-16). Vitest 4
+    // exits 1 on an empty suite by default; opt into a green run so the harness
+    // verifies and any CI/downstream gate on `npm test` passes until tests land.
     passWithNoTests: true,
     coverage: {
       provider: 'v8',
