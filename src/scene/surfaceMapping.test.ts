@@ -66,6 +66,15 @@ describe('surfaceMapping — param↔world single source of truth', () => {
     expect(vScaleFor('does-not-exist')).toBeGreaterThan(0);
   });
 
+  it('pins the corrected vScales (true domain maxima — guard against reverting to stale plan values)', () => {
+    // These three were corrected from the plan's stale estimates after grid-sampling
+    // the true domain maxima: matyas max=100 @ (10,-10) → 1.5/100; booth max≈2594 @
+    // (-10,-10); beale max≈1.82e5. Pin them so a future edit can't silently revert.
+    expect(vScaleFor('matyas')).toBeCloseTo(0.015, 12); // 0.015·100 = 1.5
+    expect(vScaleFor('booth')).toBeCloseTo(0.00058, 12); // 0.00058·2594 ≈ 1.50
+    expect(vScaleFor('beale')).toBeCloseTo(0.0000082, 12); // 0.0000082·1.82e5 ≈ 1.49
+  });
+
   it('costToWorldHeight = vScale·cost; 0 cost → 0 height; monotonic in cost', () => {
     expect(costToWorldHeight(2, 'sphere')).toBeCloseTo(0.06, 12);
     expect(costToWorldHeight(0, 'sphere')).toBe(0);

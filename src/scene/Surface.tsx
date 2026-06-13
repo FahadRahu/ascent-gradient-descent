@@ -96,8 +96,11 @@ export function Surface() {
   }, [functionId, uniforms, invalidate]);
 
   // Animate the contour drift only while playing (keeps idle frames cheap).
-  // Read isPlaying TRANSIENTLY (two-channel rule): play/pause must not
-  // re-render Surface, and the frame callback must not close over render state.
+  // Two-channel rule: ANY uiStore read inside a useFrame MUST be transient via
+  // getState() — never the reactive useUIStore(selector) form — or play/pause
+  // would re-render Surface every toggle and the frame callback would close over
+  // stale render state. (functionId/tier above ARE reactive subscriptions, but
+  // only because they drive the useEffect deps + geometry setup, not this loop.)
   useFrame((_, delta) => {
     if (useUIStore.getState().isPlaying) {
       uniforms.uTime.value += delta;

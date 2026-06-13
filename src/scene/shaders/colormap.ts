@@ -44,10 +44,10 @@ vec3 magma(float t) {
   vec3 c7 = ${MAGMA_STOPS_GLSL[7]};
   vec3 c8 = ${MAGMA_STOPS_GLSL[8]};
 
-  float s = t * 8.0;          // 0..8
-  float seg = floor(s);       // which segment (0..8)
-  float f = s - seg;          // fraction within the segment (0..1)
-
+  // Chained mix over 8 segments: at parameter s∈[0,8], clamp(s-i,0,1) is the
+  // local fraction within segment i, so each mix blends in the next stop exactly
+  // over its [i, i+1] span. Branch-free piecewise-linear interpolation.
+  float s = t * 8.0; // 0..8
   vec3 col = c0;
   col = mix(col, c1, clamp(s - 0.0, 0.0, 1.0));
   col = mix(col, c2, clamp(s - 1.0, 0.0, 1.0));
@@ -57,8 +57,6 @@ vec3 magma(float t) {
   col = mix(col, c6, clamp(s - 5.0, 0.0, 1.0));
   col = mix(col, c7, clamp(s - 6.0, 0.0, 1.0));
   col = mix(col, c8, clamp(s - 7.0, 0.0, 1.0));
-
-  // (seg, f kept for readability; the chained mix above is the interpolation.)
   return col;
 }
 `;
