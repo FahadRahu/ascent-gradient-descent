@@ -1353,10 +1353,17 @@ describe('surfaceShaders — vertex + fragment assembly (structure guard)', () =
 
   it('fragment shader applies the soft rolloff e/(1+e) as the LAST emissive op', () => {
     // The rolloff must be the final write to csm_Emissive (keeps values < 1.0).
-    const idxRolloff = surfaceFragmentShader.lastIndexOf('csm_Emissive');
-    expect(idxRolloff).toBeGreaterThan(-1);
-    const tail = surfaceFragmentShader.slice(idxRolloff);
-    expect(tail).toMatch(/csm_Emissive\s*\/\s*\(\s*1\.0\s*\+\s*csm_Emissive\s*\)/);
+    // NOTE: do NOT anchor with lastIndexOf('csm_Emissive') then require the
+    // two-token rolloff in the tail — lastIndexOf lands on the rolloff's own
+    // RHS operand, leaving a one-token tail, so that form is UNSATISFIABLE by a
+    // correct impl. Instead: assert the rolloff expression exists, and that no
+    // further `csm_Emissive =` assignment follows it.
+    const rolloff = surfaceFragmentShader.match(
+      /csm_Emissive\s*=\s*csm_Emissive\s*\/\s*\(\s*1\.0\s*\+\s*csm_Emissive\s*\)/,
+    );
+    expect(rolloff).not.toBeNull();
+    const after = surfaceFragmentShader.slice(rolloff!.index! + rolloff![0].length);
+    expect(after).not.toMatch(/csm_Emissive\s*=/); // nothing reassigns emissive after the rolloff
   });
 
   it('both shaders declare every locked uniform name', () => {
