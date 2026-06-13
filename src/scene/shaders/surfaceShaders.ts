@@ -77,6 +77,12 @@ ${magmaColormapGLSL}
 varying vec2 vParam;
 varying float vHeightN;
 
+// Approximate sRGB→linear for an albedo/emissive triple. The magma stops are
+// authored as sRGB hex (PRD §5.2); three's PBR pipeline works in LINEAR space
+// (ColorManagement on), so a colour assigned directly to csm_DiffuseColor /
+// csm_Emissive must be linearised first or it reads washed-out and desaturated.
+vec3 toLinear(vec3 c) { return pow(c, vec3(2.2)); }
+
 void main() {
   // Base colour from the magma ramp (magma() does the [uColorLow,uColorHigh] remap).
   vec3 col = magma(vHeightN);
@@ -87,13 +93,22 @@ void main() {
   vec2 grid = abs(fract(coord - 0.5) - 0.5) / fwidth(coord);
   float line = min(grid.x, grid.y);
   float contour = 1.0 - min(line, 1.0); // 1 on a line, 0 between
-  // Brighten the lines slightly (a cool-white tint) over the magma base.
+  // Lift the lines toward a cool-white over the magma base (a thin wireframe).
   vec3 lineColor = mix(col, col + vec3(0.25, 0.30, 0.40), 0.6);
   col = mix(col, lineColor, contour);
 
-  // Write emissive, then apply the soft rolloff as the LAST op so the surface
-  // stays below 1.0 and never trips the bloom luminance threshold (PRD §5.4).
-  csm_Emissive = col;
-  csm_Emissive = csm_Emissive / (1.0 + csm_Emissive);
+  vec3 colLin = toLinear(col);
+
+  // The magma ramp IS the surface albedo (PRD §5.2): the colormap must drive the
+  // visible colour, not a default-white albedo that the key light floods. Keep
+  // it the diffuse base so clearcoat/env still read as physical shading on top.
+  csm_DiffuseColor = vec4(colLin, 1.0);
+
+  // Modest cost-scaled self-illumination (PRD §5.4): a little glow in the valley,
+  // more toward the hot peaks, so the ramp reads even on shadowed faces. The soft
+  // rolloff e/(1+e) is the LAST op so the surface stays sub-1.0 and never trips
+  // the bloom luminance threshold (≤0.4-equivalent; PRD §5.4 surface row).
+  vec3 emissive = colLin * (0.18 + 0.30 * vHeightN);
+  csm_Emissive = emissive / (1.0 + emissive);
 }
 `;

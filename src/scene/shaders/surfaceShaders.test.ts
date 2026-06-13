@@ -34,7 +34,12 @@ describe('surfaceShaders — vertex + fragment assembly (structure guard)', () =
     expect(surfaceVertexShader).toMatch(/uParamRange\.[xy]\s*\/\s*/);
   });
 
-  it('fragment shader writes csm_Emissive and calls magma()', () => {
+  it('fragment shader drives BOTH the albedo and emissive from the magma ramp', () => {
+    // The magma ramp must drive csm_DiffuseColor (the surface albedo) — not just
+    // emissive — or the default-white PBR albedo floods under the key light and
+    // the colormap reads washed-out (PRD §5.2 shading note). Regression tripwire
+    // for the Task-15 live-browser fix.
+    expect(surfaceFragmentShader).toContain('csm_DiffuseColor');
     expect(surfaceFragmentShader).toContain('csm_Emissive');
     expect(surfaceFragmentShader).toContain('magma(');
   });
@@ -45,13 +50,15 @@ describe('surfaceShaders — vertex + fragment assembly (structure guard)', () =
   });
 
   it('fragment shader applies the soft rolloff e/(1+e) as the LAST emissive op', () => {
-    // The rolloff must be the final write to csm_Emissive (keeps values < 1.0).
-    const rolloff = /csm_Emissive\s*\/\s*\(\s*1\.0\s*\+\s*csm_Emissive\s*\)/;
+    // The emissive is written through a soft rolloff x/(1+x) so it stays < 1.0
+    // and never trips the bloom luminance threshold (PRD §5.4). The current form
+    // assigns csm_Emissive = <local> / (1.0 + <local>) where <local> is the
+    // cost-scaled colour. Match the rolloff assignment generically, then assert
+    // it is the FINAL write to csm_Emissive.
+    const rolloff = /csm_Emissive\s*=\s*\w+\s*\/\s*\(\s*1\.0\s*\+\s*\w+\s*\)\s*;/;
     const m = surfaceFragmentShader.match(rolloff);
-    expect(m, 'rolloff e/(1+e) must be present').not.toBeNull();
-    // Nothing may write csm_Emissive after the rolloff expression — it is the
-    // final op. (We anchor on the rolloff itself, not lastIndexOf('csm_Emissive'),
-    // because the rolloff reads csm_Emissive on its own RHS.)
+    expect(m, 'rolloff <x>/(1+<x>) assignment to csm_Emissive must be present').not.toBeNull();
+    // Nothing may assign csm_Emissive after the rolloff — it is the final op.
     const after = surfaceFragmentShader.slice(m!.index! + m![0].length);
     expect(after).not.toMatch(/csm_Emissive\s*=/);
   });

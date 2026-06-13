@@ -70,8 +70,9 @@ float surfaceHeight(int fn, vec2 p) {
       float c = 0.5 * (cos(2.0 * PI * x) + cos(2.0 * PI * y));
       return -20.0 * exp(-0.2 * r) - exp(c) + 2.718281828459045 + 20.0;
     }
+    default: // unreachable (fn is always 0..8); a guaranteed return path
+      return 0.0;
   }
-  return 0.0;
 }
 
 // --- Analytic gradient [∂f/∂x, ∂f/∂y] for each preset ---------------------
@@ -120,7 +121,8 @@ vec2 surfaceGrad(int fn, vec2 p) {
       float gy = 4.0 * exp(-0.2 * r) * (0.5 * y / r) + cosTerm * PI * sin(2.0 * PI * y);
       return vec2(gx, gy);
     }
+    default: // unreachable (fn is always 0..8); a guaranteed return path
+      return vec2(0.0, 0.0);
   }
-  return vec2(0.0, 0.0);
 }
 `;
