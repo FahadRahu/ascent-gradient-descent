@@ -24,7 +24,12 @@ export interface UIState {
 const INITIAL = {
   functionId: 'rosenbrock',
   optimizerId: 'sgd' as OptimizerId,
-  learningRate: 0.1,
+  // 0.002, not 0.1: SGD at 0.1 on Rosenbrock from (-1.2,1) diverges in ~5 steps
+  // (the gradient there is ≈(-216,-88), so a 0.1 step overshoots off the surface).
+  // 0.002 gives a smooth, monotonic descent down the valley — a good first-run
+  // default. The divergence story is still one slider-crank away (PRD §4.5).
+  // Verified live in the browser at M1a Task 15.
+  learningRate: 0.002,
   isPlaying: false,
   tier: 'high' as Tier,
   startPoint: [-1.2, 1] as const,

@@ -1,18 +1,25 @@
-import type { GradFn, Optimizer, OptimizerState, Vec2 } from './types';
+import type { CostFn, GradFn, Optimizer, OptimizerState, Vec2 } from './types';
 
 export interface StepperConfig {
   optimizer: Optimizer;
   grad: GradFn;
+  /** Cost of the active function — recorded on every history entry (incl. the
+   *  initial point) for the iteration scrubber and the cost-vs-iteration readout. */
+  cost: CostFn;
   theta0: Vec2;
   /** Fixed simulation timestep in seconds (one optimizer step per dt). */
   dt: number;
+  /** Max retained history entries (ring buffer). Oldest are dropped first so the
+   *  array stays bounded under a sustained 60fps single-step cadence. Default 4096
+   *  — the scrubber window. */
+  historyCap?: number;
 }
 
 /** A single recorded frame of the descent, for the iteration scrubber (M1). */
 export interface HistoryEntry {
   iteration: number;
   theta: Vec2;
-  cost?: number;
+  cost: number;
 }
 
 export interface Stepper {
@@ -28,22 +35,31 @@ export interface Stepper {
   reset(): void;
 }
 
+const DEFAULT_HISTORY_CAP = 4096;
+
 /**
  * Fixed-timestep accumulator (PRD §8.3): accumulates real elapsed time and
  * takes deterministic whole optimizer steps when it crosses dt, so behavior is
  * refresh-rate independent. Guards non-finite values (PRD §4.4): on NaN/Inf it
- * retains the last finite point, flags `diverged`, and stops stepping.
+ * retains the last finite point, flags `diverged`, and stops stepping. History
+ * is a bounded ring buffer (oldest dropped first) and records cost per entry.
  */
 export function createStepper(config: StepperConfig): Stepper {
-  const { optimizer, grad, theta0, dt } = config;
+  const { optimizer, grad, cost, theta0, dt } = config;
+  const historyCap = config.historyCap ?? DEFAULT_HISTORY_CAP;
 
   let theta: Vec2 = theta0;
   let state: OptimizerState = optimizer.init(theta0);
   let accumulator = 0;
   let diverged = false;
-  let history: HistoryEntry[] = [{ iteration: 0, theta: theta0 }];
+  let history: HistoryEntry[] = [{ iteration: 0, theta: theta0, cost: cost(theta0) }];
 
   const isFinitePair = (v: Vec2): boolean => Number.isFinite(v[0]) && Number.isFinite(v[1]);
+
+  const record = (iteration: number, t: Vec2): void => {
+    history.push({ iteration, theta: t, cost: cost(t) });
+    if (history.length > historyCap) history.shift(); // drop oldest; history[0] = oldest retained — O(n); fine at 4096, revisit for M1c if a larger cap is used
+  };
 
   return {
     get theta() {
@@ -73,7 +89,7 @@ export function createStepper(config: StepperConfig): Stepper {
         }
         theta = result.theta;
         state = result.state;
-        history.push({ iteration: state.iteration, theta });
+        record(state.iteration, theta);
       }
     },
     reset() {
@@ -81,7 +97,7 @@ export function createStepper(config: StepperConfig): Stepper {
       state = optimizer.init(theta0);
       accumulator = 0;
       diverged = false;
-      history = [{ iteration: 0, theta: theta0 }];
+      history = [{ iteration: 0, theta: theta0, cost: cost(theta0) }];
     },
   };
 }

@@ -53,8 +53,11 @@ export interface OptimizerState {
 }
 
 /** Result of one optimizer step: new point, advanced state, and optional
- *  internal-state values for the M2 visualization (velocity arrow, per-axis
- *  adaptive scaling, bias-corrected moments). */
+ *  internal-state values for the M2 visualization. For Adam-family optimizers
+ *  (Adam/AdamW/Nadam) `aux` carries the BIAS-CORRECTED moments and the raw
+ *  gradient: `{ mHat: Vec2, vHat: Vec2, gradient: Vec2 }` (mHat=m/(1−β₁ᵗ),
+ *  vHat=v/(1−β₂ᵗ)). Other optimizers populate aux per their own viz needs
+ *  (e.g. velocity arrow, per-axis adaptive scale). */
 export interface StepResult {
   theta: Vec2;
   state: OptimizerState;

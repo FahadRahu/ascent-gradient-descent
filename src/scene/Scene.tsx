@@ -1,26 +1,71 @@
 import { Canvas } from '@react-three/fiber';
+import { OrbitControls } from '@react-three/drei';
+import { useUIStore } from '../state/uiStore';
+import { TIER_SETTINGS } from '../quality/tiers';
+import Lights from './Lights';
+import SceneEnvironment from './SceneEnvironment';
+import { Surface } from './Surface';
+import DescentBall from './DescentBall';
+import { useSimRunner } from './useSimRunner';
 
-/** In-canvas content (no <Canvas> wrapper) — unit-testable with
- *  @react-three/test-renderer. M0 placeholder: one reference cube + a light, on
- *  the PRD §5.1 void background. The real surface/ball/post-stack arrive in M1. */
+/**
+ * In-canvas content (no <Canvas> wrapper) — unit-testable with
+ * @react-three/test-renderer. The full M1a scene (PRD §5.1): void background +
+ * exponential fog, key light + soft shadows, a swappable procedural/HDR
+ * environment, the magma CSM surface, and the lacquered descent ball. The single
+ * sim runner (the one useFrame that owns the descent) is called here because
+ * useFrame must execute inside the <Canvas> subtree, and SceneContents IS that
+ * in-canvas boundary.
+ */
 export function SceneContents() {
+  // Channel B's driver. Renders nothing; owns the stepper + writes simStore.
+  useSimRunner();
+
   return (
     <>
       <color attach="background" args={['#0B0E1A']} />
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[3, 5, 2]} intensity={1.2} />
-      <mesh>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshStandardMaterial color="#00D3F2" />
-      </mesh>
+      {/* Exponential fog in the void colour fades the surface edges into the
+          background so the plane never reads as a hard-edged card (PRD §5.1). */}
+      <fogExp2 attach="fog" args={[0x0b0e1a, 0.08]} />
+
+      <Lights />
+      {/* M1a environment: self-hosted dark-studio HDRI (PRD §6.2). Chosen at the
+          Task-15 lighting A/B over the procedural Lightformer rig — the HDR reads
+          as pure magma (no cyan clearcoat sheen competing with the colormap). The
+          procedural mode stays available via the swappable <SceneEnvironment>
+          boundary (mode="procedural") for the M1b post-stack revisit. */}
+      <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />
+
+      <Surface />
+      <DescentBall />
     </>
   );
 }
 
 /** App-facing scene: the real Canvas wrapper. */
 export function Scene() {
+  // Reactive (Channel A) reads. These change rarely and re-rendering <Scene> to
+  // update Canvas props (frameloop/dpr) is correct — it does NOT re-render the
+  // in-canvas tree's transient state.
+  const isPlaying = useUIStore((s) => s.isPlaying);
+  const tier = useUIStore((s) => s.tier);
+
+  // Power discipline (PRD §8.3): render every frame only while the descent is
+  // animating; otherwise render on demand (camera moves call invalidate() via
+  // OrbitControls; the sim runner invalidate()s on rebuild). No scrubber yet
+  // (M1c), so "live" is the only mode → frameloop = isPlaying ? always : demand.
+  // Toggling frameloop resets clock.elapsedTime, but the stepper uses per-frame
+  // delta (fixed-timestep accumulator), so the descent is unaffected.
+  const frameloop = isPlaying ? 'always' : 'demand';
+
   return (
-    <Canvas camera={{ position: [3, 3, 3], fov: 50 }} dpr={[1, 2]}>
+    <Canvas
+      shadows
+      camera={{ position: [3, 3, 3], fov: 50 }}
+      dpr={[1, TIER_SETTINGS[tier].dpr]}
+      frameloop={frameloop}
+    >
+      <OrbitControls makeDefault />
       <SceneContents />
     </Canvas>
   );
