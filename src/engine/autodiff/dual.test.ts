@@ -7,6 +7,16 @@ describe('Dual numbers', () => {
     expect(c.du).toBe(0);
   });
 
+  it('sum rule: d/dx[x + x] at x=3 is 2; adding a constant leaves the derivative at 1', () => {
+    const x = D(3, 1); // seed x with derivative 1
+    const doubled = add(x, x);
+    expect(doubled.re).toBe(6);
+    expect(doubled.du).toBe(2);
+    const shifted = add(x, dConst(10));
+    expect(shifted.re).toBe(13);
+    expect(shifted.du).toBe(1);
+  });
+
   it('product rule: d/dx[x*x] at x=3 is 2x=6', () => {
     const x = D(3, 1); // seed x with derivative 1
     const r = mul(x, x);
