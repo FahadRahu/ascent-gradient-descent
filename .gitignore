@@ -4,3 +4,8 @@ dist
 .DS_Store
 .superpowers/
 *.tsbuildinfo
+
+# tsc -b emits these config twins at the repo root; build output, not source
+vite.config.js
+vite.config.d.ts
+coverage
