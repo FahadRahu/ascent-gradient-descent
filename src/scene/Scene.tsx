@@ -7,6 +7,8 @@ import Lights from './Lights';
 import SceneEnvironment from './SceneEnvironment';
 import { Surface } from './Surface';
 import DescentBall from './DescentBall';
+import DescentPath from './DescentPath';
+import DescentTrail from './DescentTrail';
 import PostStack from './PostStack';
 import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
@@ -49,6 +51,11 @@ export function SceneContents() {
 
       <Surface />
       <DescentBall />
+      {/* Persistent revealed TubeGeometry ribbon (grows with the descent) +
+          the live drei <Trail> streaming behind the ball. Their material handles
+          are wired to heroRefs in Phase D (mounted prop-less here). */}
+      <DescentPath />
+      <DescentTrail />
       {/* The merged AGX/HalfFloat post-stack — ALWAYS mounted; self-gates by tier
           (Low/fallback mount no composer and use the renderer-AGX path). */}
       <PostStack refs={heroRefs} />

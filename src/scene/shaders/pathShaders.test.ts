@@ -5,8 +5,8 @@ describe('pathShaders — GLSL structure guards', () => {
     expect(pathVertexShader).toContain('vPathUv = uv');
   });
 
-  it('fragment reveals via smoothstep on uProgress and discards the tail', () => {
-    expect(pathFragmentShader).toContain('smoothstep(uProgress - uEdge, uProgress, vPathUv.x)');
+  it('fragment reveals the trail behind the front and discards ahead', () => {
+    expect(pathFragmentShader).toContain('smoothstep(uProgress, uProgress + uEdge, vPathUv.x)');
     expect(pathFragmentShader).toContain('discard');
   });
 
