@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { HalfFloatType } from 'three';
+import type { BloomEffect, VignetteEffect } from 'postprocessing';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   EffectComposer,
@@ -66,6 +67,25 @@ export default function PostStack({ refs }: PostStackProps) {
   // A SEPARATE scratch goal we recompute each frame; dof.target eases toward it.
   const focusGoal = useMemo(() => new THREE.Vector3(0, 0, 5), []);
 
+  // CALLBACK refs for Bloom + Vignette (NOT ref objects). Why: in @r3/pp 3.0.4
+  // these effects are wrapEffect plain function components (not forwardRef), so
+  // under React 19 a `ref` lands in `...props`, and the wrapper does
+  // `useMemo(..., [JSON.stringify(props)])`. A ref OBJECT whose `.current` holds
+  // the effect (a fullscreen-mesh scene graph with a children→parent cycle) makes
+  // JSON.stringify THROW on the first re-render after mount (e.g. toggling
+  // isPlaying) → the render aborts → the scene goes blank. A callback ref is a
+  // FUNCTION, which JSON.stringify silently drops (no cycle), while still
+  // populating the shared HeroRefs. (N8AO/DepthOfField are forwardRef — ref never
+  // enters props — so they keep plain ref objects.)
+  const setBloomRef = useCallback(
+    (e: BloomEffect | null) => { refs.bloom.current = e; },
+    [refs.bloom],
+  );
+  const setVignetteRef = useCallback(
+    (e: VignetteEffect | null) => { refs.vignette.current = e; },
+    [refs.vignette],
+  );
+
   // --- Low/fallback: renderer AGX, no composer. Restore on cleanup so an M1c
   //     runtime swap to a composer tier doesn't leave a stale renderer setting. --
   useEffect(() => {
@@ -127,7 +147,7 @@ export default function PostStack({ refs }: PostStackProps) {
     />,
     <Bloom
       key="bloom"
-      ref={refs.bloom}
+      ref={setBloomRef}
       mipmapBlur
       intensity={cfg.bloom.intensity}
       luminanceThreshold={0.9}
@@ -140,7 +160,7 @@ export default function PostStack({ refs }: PostStackProps) {
       : []),
     <SMAA key="smaa" preset={cfg.smaaPreset} />,
     <ChromaticAberration key="ca" offset={new THREE.Vector2(0.0008, 0.0005)} blendFunction={BlendFunction.NORMAL} />,
-    <Vignette key="vignette" ref={refs.vignette} offset={0.35} darkness={0.55} technique={VignetteTechnique.DEFAULT} />,
+    <Vignette key="vignette" ref={setVignetteRef} offset={0.35} darkness={0.55} technique={VignetteTechnique.DEFAULT} />,
     <Noise key="noise" premultiply opacity={0.04} blendFunction={BlendFunction.SCREEN} />,
     <ToneMapping key="tonemap" mode={ToneMappingMode.AGX} />,
   ];
