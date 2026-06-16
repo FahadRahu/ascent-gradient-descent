@@ -3,9 +3,27 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { getFunction } from '../engine/functions/registry';
 import { makeOptimizer } from '../engine/optimizers/registry';
 import { createStepper, type Stepper } from '../engine/stepper';
+import type { HistoryEntry } from '../engine/stepper';
 import type { Vec2 } from '../engine/types';
 import { useUIStore } from '../state/uiStore';
 import { simStore } from '../state/simStore';
+
+/**
+ * Channel-B handle onto the live run for read-only per-frame consumers (the
+ * descent path). The stepper's `history` is the descent polyline; simStore holds
+ * only the CURRENT point. `runId` increments on every rebuild so consumers detect
+ * a run change (function/optimizer/lr/startPoint) and reset their geometry. Read
+ * transiently inside useFrame — never subscribe.
+ */
+export interface SimRunnerHandle {
+  history: readonly HistoryEntry[];
+  iteration: number;
+  runId: number;
+}
+const handle: SimRunnerHandle = { history: [], iteration: 0, runId: 0 };
+export function getSimRunnerHandle(): SimRunnerHandle {
+  return handle;
+}
 
 /**
  * Fixed simulation timestep (seconds per optimizer step). 1/30 s ≈ 33 ms/step
@@ -53,6 +71,12 @@ export function useSimRunner(): void {
     });
     stepperRef.current = stepper;
 
+    // Publish the fresh run to the Channel-B handle and bump runId so the path
+    // resets its geometry to the reseeded single-point history.
+    handle.history = stepper.history;
+    handle.iteration = 0;
+    handle.runId += 1;
+
     // Seed Channel B at θ₀ so the ball is correctly placed even before play.
     const sim = simStore.getState();
     sim.setTheta(theta0);
@@ -76,6 +100,7 @@ export function useSimRunner(): void {
     if (!useUIStore.getState().isPlaying) return;
 
     stepper.advance(delta);
+    handle.iteration = stepper.iteration;
 
     // Write Channel B once per frame from the post-advance stepper. Cost comes
     // from the last history entry the stepper recorded this frame (it computes
