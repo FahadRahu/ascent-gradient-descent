@@ -109,65 +109,45 @@ export default function PostStack({ refs }: PostStackProps) {
   //     >1 emissive un-clamped so selective bloom works. Child order = §3.3. ----
   //
   // DepthOfField conditional: EffectComposer's children type is JSX.Element |
-  // JSX.Element[] — it doesn't accept false/null in the child slot. We split into
-  // two return paths (with/without DOF) to stay TS-clean without a type cast.
-  if (cfg.dof) {
-    return (
-      <EffectComposer multisampling={0} frameBufferType={HalfFloatType}>
-        <N8AO
-          ref={n8aoRef}
-          aoRadius={0.4}
-          distanceFalloff={1.0}
-          intensity={3}
-          color="black"
-          quality={cfg.n8ao.quality}
-          halfRes={cfg.n8ao.halfRes}
-          denoiseRadius={0}
-        />
-        <Bloom
-          ref={refs.bloom}
-          mipmapBlur
-          intensity={cfg.bloom.intensity}
-          luminanceThreshold={0.9}
-          luminanceSmoothing={0.025}
-          radius={0.7}
-          levels={cfg.bloom.levels}
-        />
-        <DepthOfField ref={refs.dof} target={focusTarget} focusRange={0.3} bokehScale={3} resolutionScale={1} />
-        <SMAA preset={cfg.smaaPreset} />
-        <ChromaticAberration offset={new THREE.Vector2(0.0008, 0.0005)} blendFunction={BlendFunction.NORMAL} />
-        <Vignette ref={refs.vignette} offset={0.35} darkness={0.55} technique={VignetteTechnique.DEFAULT} />
-        <Noise premultiply opacity={0.04} blendFunction={BlendFunction.SCREEN} />
-        <ToneMapping mode={ToneMappingMode.AGX} />
-      </EffectComposer>
-    );
-  }
+  // JSX.Element[] — it rejects false/null in a child slot. So we build the effect
+  // children as a SINGLE ordered array and splice DOF in/out (spread an empty
+  // array when off). One subtree, no duplication, TS-clean, order preserved
+  // (§3.3): N8AO → Bloom → [DOF] → SMAA → CA → Vignette → Noise → ToneMapping.
+  const effects = [
+    <N8AO
+      key="n8ao"
+      ref={n8aoRef}
+      aoRadius={0.4}
+      distanceFalloff={1.0}
+      intensity={3}
+      color="black"
+      quality={cfg.n8ao.quality}
+      halfRes={cfg.n8ao.halfRes}
+      denoiseRadius={0}
+    />,
+    <Bloom
+      key="bloom"
+      ref={refs.bloom}
+      mipmapBlur
+      intensity={cfg.bloom.intensity}
+      luminanceThreshold={0.9}
+      luminanceSmoothing={0.025}
+      radius={0.7}
+      levels={cfg.bloom.levels}
+    />,
+    ...(cfg.dof
+      ? [<DepthOfField key="dof" ref={refs.dof} target={focusTarget} focusRange={0.3} bokehScale={3} resolutionScale={1} />]
+      : []),
+    <SMAA key="smaa" preset={cfg.smaaPreset} />,
+    <ChromaticAberration key="ca" offset={new THREE.Vector2(0.0008, 0.0005)} blendFunction={BlendFunction.NORMAL} />,
+    <Vignette key="vignette" ref={refs.vignette} offset={0.35} darkness={0.55} technique={VignetteTechnique.DEFAULT} />,
+    <Noise key="noise" premultiply opacity={0.04} blendFunction={BlendFunction.SCREEN} />,
+    <ToneMapping key="tonemap" mode={ToneMappingMode.AGX} />,
+  ];
+
   return (
     <EffectComposer multisampling={0} frameBufferType={HalfFloatType}>
-      <N8AO
-        ref={n8aoRef}
-        aoRadius={0.4}
-        distanceFalloff={1.0}
-        intensity={3}
-        color="black"
-        quality={cfg.n8ao.quality}
-        halfRes={cfg.n8ao.halfRes}
-        denoiseRadius={0}
-      />
-      <Bloom
-        ref={refs.bloom}
-        mipmapBlur
-        intensity={cfg.bloom.intensity}
-        luminanceThreshold={0.9}
-        luminanceSmoothing={0.025}
-        radius={0.7}
-        levels={cfg.bloom.levels}
-      />
-      <SMAA preset={cfg.smaaPreset} />
-      <ChromaticAberration offset={new THREE.Vector2(0.0008, 0.0005)} blendFunction={BlendFunction.NORMAL} />
-      <Vignette ref={refs.vignette} offset={0.35} darkness={0.55} technique={VignetteTechnique.DEFAULT} />
-      <Noise premultiply opacity={0.04} blendFunction={BlendFunction.SCREEN} />
-      <ToneMapping mode={ToneMappingMode.AGX} />
+      {effects}
     </EffectComposer>
   );
 }
