@@ -21,18 +21,27 @@ import type { BloomEffect, DepthOfFieldEffect, VignetteEffect } from 'postproces
  * the tier/fallback story: on Low the beat degrades to the emissive choreography
  * + ember ring + the tube halo.
  *
- * `pathHalo` is typed structurally (just the uHaloColor uniform HeroBeat eases)
- * so heroRefs.ts need not import the PathUniforms type from the DescentPath
- * component module — DescentPath's PathUniforms is assignable to it.
+ * `pathHalo` uses the shared `HaloUniformRef` type below (just the uHaloColor
+ * uniform HeroBeat eases) so heroRefs.ts need not import PathUniforms from the
+ * DescentPath component module. CRUCIAL: DescentPath's `materialUniformsRef` prop
+ * must be typed `RefObject<HaloUniformRef | null>` too (NOT RefObject<PathUniforms>)
+ * — RefObject is INVARIANT (its `.current` is read+written), so the prop-pass
+ * `materialUniformsRef={heroRefs.pathHalo}` only typechecks when BOTH sides use the
+ * SAME ref type. DescentPath still writes its wider PathUniforms INTO the ref
+ * (object assignment IS covariant: PathUniforms ⊇ HaloUniformRef).
  */
+export interface HaloUniformRef {
+  uHaloColor: { value: THREE.Color };
+}
+
 export interface HeroRefs {
   /** Lacquered ball's MeshPhysicalMaterial (owned by DescentBall). */
   ballMaterial: RefObject<THREE.MeshPhysicalMaterial | null>;
   /** Live trail ribbon material — its `.color` is the HALO hue (owned by DescentTrail). */
   trailMaterial: RefObject<(THREE.Material & { color: THREE.Color }) | null>;
   /** Persistent tube's halo uniform — survives a Trail NO-GO so the cyan/fuchsia
-   *  halo cue always reads (owned by DescentPath; structurally = PathUniforms). */
-  pathHalo: RefObject<{ uHaloColor: { value: THREE.Color } } | null>;
+   *  halo cue always reads (owned by DescentPath). */
+  pathHalo: RefObject<HaloUniformRef | null>;
   /** Selective bloom effect — `.intensity` live setter (owned by PostStack). */
   bloom: RefObject<BloomEffect | null>;
   /** DOF effect — HeroBeat writes only `.bokehScale` (owned by PostStack). */

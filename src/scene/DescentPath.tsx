@@ -9,6 +9,7 @@ import type { Tier } from '../quality/tiers';
 import { historyToWorldPoints, buildTubeGeometry, revealProgress } from './pathGeometry';
 import { getSimRunnerHandle } from './useSimRunner';
 import { pathVertexShader, pathFragmentShader } from './shaders/pathShaders';
+import type { HaloUniformRef } from './heroRefs';
 
 /** Slim filament radius; the glow does the rest. */
 const PATH_RADIUS = 0.018;
@@ -38,8 +39,11 @@ export interface PathUniforms {
 export interface DescentPathProps {
   /** Optional: published so the hero beat can ease the ribbon halo color
    *  (uHaloColor — cyan→fuchsia on divergence) even when the live <Trail> is
-   *  absent (the Risk #2 NO-GO fallback). */
-  materialUniformsRef?: RefObject<PathUniforms | null>;
+   *  absent (the Risk #2 NO-GO fallback). Typed as the SHARED `HaloUniformRef`
+   *  (not the wider PathUniforms) so `materialUniformsRef={heroRefs.pathHalo}`
+   *  typechecks — RefObject is invariant, so both sides must use the same type.
+   *  The component still WRITES its full PathUniforms into it (covariant). */
+  materialUniformsRef?: RefObject<HaloUniformRef | null>;
 }
 
 /**
