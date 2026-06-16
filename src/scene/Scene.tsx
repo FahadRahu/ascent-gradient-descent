@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { useUIStore } from '../state/uiStore';
@@ -6,26 +7,36 @@ import Lights from './Lights';
 import SceneEnvironment from './SceneEnvironment';
 import { Surface } from './Surface';
 import DescentBall from './DescentBall';
+import PostStack from './PostStack';
+import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
 
 /**
  * In-canvas content (no <Canvas> wrapper) — unit-testable with
- * @react-three/test-renderer. The full M1a scene (PRD §5.1): void background +
+ * @react-three/test-renderer. The M1a scene (PRD §5.1): void background +
  * exponential fog, key light + soft shadows, a swappable procedural/HDR
- * environment, the magma CSM surface, and the lacquered descent ball. The single
- * sim runner (the one useFrame that owns the descent) is called here because
- * useFrame must execute inside the <Canvas> subtree, and SceneContents IS that
- * in-canvas boundary.
+ * environment, the magma CSM surface, and the lacquered descent ball — now with
+ * the M1b cinematic layer composing on top (post-stack first). The single sim
+ * runner (the one useFrame that owns the descent) is called here because useFrame
+ * must execute inside the <Canvas> subtree, and SceneContents IS that in-canvas
+ * boundary.
  */
 export function SceneContents() {
   // Channel B's driver. Renders nothing; owns the stepper + writes simStore.
   useSimRunner();
 
+  // The cross-subsystem ref bundle — created once (stable identity). Only
+  // bloom/dof/vignette are populated this phase (by PostStack); ballMaterial /
+  // trailMaterial / pathHalo are wired in Phases B & D.
+  const heroRefs = useMemo(() => createHeroRefs(), []);
+
   return (
     <>
       <color attach="background" args={['#0B0E1A']} />
       {/* Exponential fog in the void colour fades the surface edges into the
-          background so the plane never reads as a hard-edged card (PRD §5.1). */}
+          background so the plane never reads as a hard-edged card (PRD §5.1).
+          M1b note: re-judge density (0.08) at the Task-19 checkpoint vs the AGX
+          grade + bloom (PRD §5.4 starts at 0.025). */}
       <fogExp2 attach="fog" args={[0x0b0e1a, 0.08]} />
 
       <Lights />
@@ -38,6 +49,9 @@ export function SceneContents() {
 
       <Surface />
       <DescentBall />
+      {/* The merged AGX/HalfFloat post-stack — ALWAYS mounted; self-gates by tier
+          (Low/fallback mount no composer and use the renderer-AGX path). */}
+      <PostStack refs={heroRefs} />
     </>
   );
 }

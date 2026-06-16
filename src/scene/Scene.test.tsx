@@ -37,6 +37,23 @@ vi.mock('@react-three/drei', async (importOriginal) => {
   };
 });
 
+// M1b: <PostStack> pulls in @react-three/postprocessing, whose <EffectComposer>
+// touches real GL on mount (throws under the test-renderer mock GL, exactly like
+// the drei helpers above). Neutralize it to a children passthrough + no-op effects
+// so the composed-tree assertions still verify the genuine M1a content; the real
+// post-stack is proven in the live browser (Task 4 / Task 19).
+vi.mock('@react-three/postprocessing', () => ({
+  EffectComposer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  N8AO: () => null,
+  Bloom: () => null,
+  DepthOfField: () => null,
+  SMAA: () => null,
+  ChromaticAberration: () => null,
+  Vignette: () => null,
+  Noise: () => null,
+  ToneMapping: () => null,
+}));
+
 // Imported AFTER vi.mock so SceneContents' subtree binds to the mocked drei helpers.
 const { SceneContents } = await import('./Scene');
 
