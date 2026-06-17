@@ -6,6 +6,7 @@ import { TIER_SETTINGS } from '../quality/tiers';
 import Lights from './Lights';
 import SceneEnvironment from './SceneEnvironment';
 import { Surface } from './Surface';
+import Swarm from './Swarm';
 import DescentBall from './DescentBall';
 import DescentPath from './DescentPath';
 import DescentTrail from './DescentTrail';
@@ -50,6 +51,9 @@ export function SceneContents() {
       <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />
 
       <Surface />
+      {/* The stateless ambient swarm — motes streaming downhill over the baked
+          flow field. Always mounted; self-gates by tier (fallback renders null). */}
+      <Swarm />
       <DescentBall />
       {/* Persistent revealed TubeGeometry ribbon (grows with the descent) +
           the live drei <Trail> streaming behind the ball. Their material handles
