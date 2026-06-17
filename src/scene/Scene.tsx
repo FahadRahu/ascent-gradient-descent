@@ -1,31 +1,48 @@
+import { useMemo, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
 import { useUIStore } from '../state/uiStore';
 import { TIER_SETTINGS } from '../quality/tiers';
 import Lights from './Lights';
 import SceneEnvironment from './SceneEnvironment';
 import { Surface } from './Surface';
+import Swarm from './Swarm';
 import DescentBall from './DescentBall';
+import DescentPath from './DescentPath';
+import DescentTrail from './DescentTrail';
+import PostStack from './PostStack';
+import EmberRing from './EmberRing';
+import HeroBeat from './HeroBeat';
+import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
 
 /**
  * In-canvas content (no <Canvas> wrapper) — unit-testable with
- * @react-three/test-renderer. The full M1a scene (PRD §5.1): void background +
+ * @react-three/test-renderer. The M1a scene (PRD §5.1): void background +
  * exponential fog, key light + soft shadows, a swappable procedural/HDR
- * environment, the magma CSM surface, and the lacquered descent ball. The single
- * sim runner (the one useFrame that owns the descent) is called here because
- * useFrame must execute inside the <Canvas> subtree, and SceneContents IS that
- * in-canvas boundary.
+ * environment, the magma CSM surface, and the lacquered descent ball — now with
+ * the M1b cinematic layer composing on top (post-stack first). The single sim
+ * runner (the one useFrame that owns the descent) is called here because useFrame
+ * must execute inside the <Canvas> subtree, and SceneContents IS that in-canvas
+ * boundary.
  */
 export function SceneContents() {
   // Channel B's driver. Renders nothing; owns the stepper + writes simStore.
   useSimRunner();
 
+  // The single cross-subsystem ref bundle (stable identity). Threaded to every
+  // owner so they populate .current; the whole object is handed to HeroBeat.
+  const heroRefs = useMemo(() => createHeroRefs(), []);
+  const emberRef = useRef<THREE.Mesh>(null);
+
   return (
     <>
       <color attach="background" args={['#0B0E1A']} />
       {/* Exponential fog in the void colour fades the surface edges into the
-          background so the plane never reads as a hard-edged card (PRD §5.1). */}
+          background so the plane never reads as a hard-edged card (PRD §5.1).
+          M1b note: re-judge density (0.08) at the Task-19 checkpoint vs the AGX
+          grade + bloom (PRD §5.4 starts at 0.025). */}
       <fogExp2 attach="fog" args={[0x0b0e1a, 0.08]} />
 
       <Lights />
@@ -37,7 +54,22 @@ export function SceneContents() {
       <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />
 
       <Surface />
-      <DescentBall />
+      {/* The stateless ambient swarm — motes streaming downhill over the baked
+          flow field. Always mounted; self-gates by tier (fallback renders null). */}
+      <Swarm />
+      {/* Ball owns position; lifts its material ref so HeroBeat drives the emissive. */}
+      <DescentBall materialRef={heroRefs.ballMaterial} />
+      {/* Persistent revealed tube; publishes its halo uniform so the cyan/fuchsia
+          cue reads even if the live <Trail> NO-GO'd (PathUniforms ⊇ pathHalo's shape). */}
+      <DescentPath materialUniformsRef={heroRefs.pathHalo} />
+      {/* Live ribbon (publishes its material to the beat for the halo bleed). */}
+      <DescentTrail materialRef={heroRefs.trailMaterial} />
+      {/* The lone ember ring — positioned/animated by HeroBeat in 'settle'. */}
+      <EmberRing ref={emberRef} />
+      {/* Post-stack — ALWAYS mounted, self-gates by tier; populates bloom/dof/vignette. */}
+      <PostStack refs={heroRefs} />
+      {/* The integrator — renders nothing; mutates the assembled refs each frame. */}
+      <HeroBeat refs={heroRefs} emberRef={emberRef} />
     </>
   );
 }

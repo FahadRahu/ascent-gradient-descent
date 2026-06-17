@@ -1,4 +1,4 @@
-import { SoftShadows, ContactShadows } from '@react-three/drei';
+import { ContactShadows } from '@react-three/drei';
 import { useUIStore } from '../state/uiStore';
 import { TIER_SETTINGS } from '../quality/tiers';
 
@@ -14,27 +14,31 @@ import { TIER_SETTINGS } from '../quality/tiers';
  * - shadow-bias / shadow-normalBias kill the displaced-surface acne.
  *
  * Soft-shadow STRATEGY is tier-conditional:
- *   ultra/high → drei <SoftShadows>  (percentage-closer soft shadows)
- *   medium     → drei <ContactShadows frames={1}>  (cheap, baked once)
- *   low/fallback → neither (the hard PCF shadow, or none if map size is 0)
+ *   ultra/high → the directional key's real cast shadow via the <Canvas shadows>
+ *                PCFSoftShadowMap default (soft-edged percentage-closer filtering).
+ *   medium     → drei <ContactShadows frames={1}>  (cheap, baked once).
+ *   low/fallback → none if shadowMapSize is 0.
  *
- * ⚠️ <SoftShadows> GOTCHA: it globally patches THREE.ShaderChunk and recompiles
- * ALL materials on mount AND on any prop change. Its props here are STATIC
- * per-tier constants — never bind them to an animated/interactive value, or
- * every frame triggers a full shader recompile and tanks the frame rate.
+ * ⚠️ drei <SoftShadows> (PCSS) was REMOVED at M1b: it string-patches
+ * THREE.ShaderChunk.shadowmap_pars_fragment assuming the legacy RGBA-packed-depth
+ * path (`unpackRGBAToDepth(texture2D(shadowMap,…))`), but three 0.184 modernized
+ * shadows to `sampler2DShadow` + hardware depth-compare. The patch injects a bare
+ * `return` at the uniform-declaration scope (→ `'return': syntax error`) and calls
+ * `unpackRGBAToDepth` on a `sampler2DShadow` (→ no-matching-overload), producing an
+ * uncompilable fragment shader that BLANKS the whole scene. drei 10.7.7 is the
+ * latest 10.x and still ships this; the only fix would downgrade three below the
+ * locked `~0.184` pin (which the postprocessing `<0.185` cap + CSM depend on).
+ * So PCFSoftShadowMap is the soft-shadow path on this stack. (Pre-existing M1a
+ * issue surfaced at the M1b live checkpoint; reproduced on main/v0.2.0-m1a.)
  */
 export default function Lights() {
   const tier = useUIStore((s) => s.tier);
   const shadowMapSize = TIER_SETTINGS[tier].shadowMapSize;
   const castShadow = shadowMapSize > 0;
-  const useSoftShadows = tier === 'ultra' || tier === 'high';
   const useContactShadows = tier === 'medium';
 
   return (
     <>
-      {/* SoftShadows mounted ONCE at this tier; static props (see gotcha above). */}
-      {useSoftShadows && <SoftShadows size={25} samples={10} focus={0} />}
-
       {/* Low neutral fill — keeps shadowed faces from crushing to black. */}
       <ambientLight intensity={0.15} />
 

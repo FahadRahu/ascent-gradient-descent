@@ -1,0 +1,87 @@
+// @vitest-environment happy-dom
+import * as THREE from 'three';
+import ReactThreeTestRenderer from '@react-three/test-renderer';
+import { simStore } from '../state/simStore';
+import { useUIStore } from '../state/uiStore';
+import { createHeroRefs } from './heroRefs';
+import HeroBeat from './HeroBeat';
+
+function Host({ refs, emberRef }: { refs: ReturnType<typeof createHeroRefs>; emberRef: React.RefObject<THREE.Mesh | null> }) {
+  return <HeroBeat refs={refs} emberRef={emberRef} />;
+}
+
+describe('HeroBeat (R3F structure smoke)', () => {
+  it('renders nothing and mutates the ball material on arrival without throwing', async () => {
+    // Seed an arrived state: sphere at the minimum.
+    useUIStore.getState().setFunctionId('sphere');
+    useUIStore.getState().setStartPoint([0.02, 0.02]);
+    simStore.getState().setTheta([0.02, 0.02]);
+    simStore.getState().setCost(0.0008);
+    simStore.getState().setDiverged(false);
+
+    const refs = createHeroRefs();
+    const ballMat = new THREE.MeshPhysicalMaterial({ emissive: '#00D3F2', emissiveIntensity: 3 });
+    refs.ballMaterial.current = ballMat;
+
+    const emberRef = { current: new THREE.Mesh(new THREE.RingGeometry(0.14, 0.2, 8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0 })) };
+
+    const renderer = await ReactThreeTestRenderer.create(<Host refs={refs} emberRef={emberRef} />);
+    expect(renderer.scene.findAllByType('Mesh').length).toBe(0); // controller renders nothing
+    // Run through idle→approach(~APPROACH_MS=800ms≈48 frames)→touchdown. 90 frames
+    // (~1.5s at 1/60) clears the lead-in and enters the flash with margin.
+    await renderer.advanceFrames(90, 1 / 60);
+    expect(ballMat.emissiveIntensity).toBeGreaterThan(3); // the flash began
+    await renderer.unmount();
+  });
+
+  it('resets a left-over ember ring when the run changes (no carry-over into the next run)', async () => {
+    // Simulate the start of a NEW run whose ball is mid-descent (not arrived), while
+    // the ember ring is still in its previous-run "settled" visible state. The run
+    // change must reset the ring so it does not persist into the new descent.
+    useUIStore.getState().setFunctionId('sphere');
+    useUIStore.getState().setOptimizerId('sgd');
+    useUIStore.getState().setLearningRate(0.1);
+    useUIStore.getState().setStartPoint([3, 3]);
+    simStore.getState().setTheta([3, 3]); // far from the minimum → not arrived
+    simStore.getState().setCost(18);
+    simStore.getState().setDiverged(false);
+
+    const refs = createHeroRefs();
+    // A left-over settled ember: visible, full scale, lit.
+    const emberMat = new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.9 });
+    const ember = new THREE.Mesh(new THREE.RingGeometry(0.14, 0.2, 8), emberMat);
+    ember.visible = true;
+    ember.scale.setScalar(1);
+    const emberRef = { current: ember };
+
+    const renderer = await ReactThreeTestRenderer.create(<Host refs={refs} emberRef={emberRef} />);
+    // First frame adopts the run identity; now switch the run (new start point) and
+    // advance — the run-change branch must reset the ember.
+    await renderer.advanceFrames(2, 1 / 60);
+    useUIStore.getState().setStartPoint([-3, -3]); // new run identity
+    await renderer.advanceFrames(2, 1 / 60);
+
+    expect(ember.visible).toBe(false);
+    expect(ember.scale.x).toBeCloseTo(0.001, 5);
+    expect(emberMat.opacity).toBe(0);
+    await renderer.unmount();
+  });
+
+  it('dims the ball core on divergence (the visual opposite)', async () => {
+    useUIStore.getState().setFunctionId('rosenbrock');
+    simStore.getState().setTheta([-1.2, 1]);
+    simStore.getState().setCost(1e9);
+    simStore.getState().setDiverged(true);
+
+    const refs = createHeroRefs();
+    const ballMat = new THREE.MeshPhysicalMaterial({ emissive: '#00D3F2', emissiveIntensity: 3 });
+    refs.ballMaterial.current = ballMat;
+    const emberRef = { current: null as THREE.Mesh | null };
+
+    const renderer = await ReactThreeTestRenderer.create(<Host refs={refs} emberRef={emberRef} />);
+    await renderer.advanceFrames(60, 1 / 60);
+    expect(ballMat.emissiveIntensity).toBeLessThan(3); // dimmed, not brightened
+    await renderer.unmount();
+    simStore.getState().setDiverged(false); // restore
+  });
+});

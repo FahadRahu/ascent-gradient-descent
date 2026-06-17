@@ -1,4 +1,6 @@
 // @vitest-environment happy-dom
+import { createRef } from 'react';
+import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { simStore } from '../state/simStore';
 import DescentBall from './DescentBall';
@@ -19,12 +21,20 @@ describe('DescentBall (R3F smoke test)', () => {
   it('advances frames without throwing when the sim store has a point', async () => {
     // Put a real param-space point into the sim store, then pump frames; the
     // useFrame reads it transiently and damps position. We only assert no throw
-    // (real motion is a live-browser check — Task 12).
+    // (real motion is a live-browser check — Task 19 (M1b live smoke)).
     simStore.getState().setTheta([-1.2, 1]);
     simStore.getState().setCost(24.2);
     const renderer = await ReactThreeTestRenderer.create(<DescentBall />);
     await renderer.advanceFrames(10, 1 / 60);
     expect(renderer.scene.findAllByType('Mesh').length).toBe(1);
+    await renderer.unmount();
+  });
+
+  it('populates an external materialRef when provided', async () => {
+    const matRef = createRef<THREE.MeshPhysicalMaterial>();
+    const renderer = await ReactThreeTestRenderer.create(<DescentBall materialRef={matRef} />);
+    expect(matRef.current).not.toBeNull();
+    expect(matRef.current?.type).toBe('MeshPhysicalMaterial');
     await renderer.unmount();
   });
 });

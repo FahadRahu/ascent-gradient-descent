@@ -4,25 +4,17 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { useUIStore } from '../state/uiStore';
 
 // ── Accommodation ─────────────────────────────────────────────────────────────
-// SoftShadows patches THREE.ShaderChunk then calls gl.compile(scene, camera)
-// and gl.info.programs.length = 0 on mount. Under test-renderer's mock GL,
-// gl.compile is not a real function and gl.info.programs is undefined, so these
-// calls throw. This is a limitation of the headless mock renderer, NOT of the
-// Lights component. We mock SoftShadows to a no-op (returns null) — the
-// structural fact asserted (DirectionalLight + AmbientLight exist) is genuine
-// because only SoftShadows is mocked; the light primitives stay real.
-//
-// ContactShadows uses useFrame for its render pass (no mount-time GL calls),
-// but its useMemo creates WebGLRenderTarget which can also misbehave under the
-// mock. We mock it to an inert group as well, same rationale.
-//
-// The real visual check of SoftShadows/ContactShadows is the live-browser A/B
-// in Task 12.
+// Lights no longer mounts drei <SoftShadows> (removed at M1b — incompatible with
+// three 0.184's sampler2DShadow shadow shader; see Lights.tsx). The remaining
+// drei helper, <ContactShadows> (medium tier), builds a WebGLRenderTarget in a
+// useMemo that misbehaves under test-renderer's MOCK GL, so we mock it to a no-op.
+// Only ContactShadows is mocked — the light primitives stay real, so the asserted
+// structure (DirectionalLight + AmbientLight) is genuine. The real visual shadow
+// check is the live-browser checkpoint.
 vi.mock('@react-three/drei', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@react-three/drei')>();
   return {
     ...actual,
-    SoftShadows: () => null,
     ContactShadows: () => null,
   };
 });

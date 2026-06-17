@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import type { RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { easing } from 'maath';
 import * as THREE from 'three';
@@ -9,6 +10,12 @@ import { paramToWorldXZ, costToWorldHeight } from './surfaceMapping';
 
 /** Radius of the orb in world units; also its resting offset above the surface. */
 const BALL_RADIUS = 0.08;
+
+export interface DescentBallProps {
+  /** Optional external ref to the orb's material so the hero beat can drive its
+   *  emissive intensity/colour during the arrival beat. Position stays owned here. */
+  materialRef?: RefObject<THREE.MeshPhysicalMaterial | null>;
+}
 
 /**
  * The lacquered descent ball (spec §5.3) — the single agent of the M1 cinematic
@@ -24,8 +31,12 @@ const BALL_RADIUS = 0.08;
  * with the Surface so the ball sits exactly ON the displaced terrain):
  *   (θx, θy) --paramToWorldXZ--> (worldX, worldZ)
  *   cost     --costToWorldHeight--> worldY  (+ BALL_RADIUS so it rests on top)
+ *
+ * M1b: accepts an optional `materialRef` so HeroBeat can drive the emissive flash/
+ * settle/dim during the arrival beat. The ball still owns position; the beat owns
+ * appearance. The prop is optional so the component stays usable standalone.
  */
-export default function DescentBall() {
+export default function DescentBall({ materialRef }: DescentBallProps = {}) {
   const meshRef = useRef<THREE.Mesh>(null);
   // Reusable scratch target so the per-frame math allocates nothing.
   const target = useRef(new THREE.Vector3());
@@ -52,6 +63,7 @@ export default function DescentBall() {
     <mesh ref={meshRef} castShadow>
       <sphereGeometry args={[BALL_RADIUS, 32, 32]} />
       <meshPhysicalMaterial
+        ref={materialRef}
         color="#0a0a0a"
         roughness={0.3}
         metalness={0}
