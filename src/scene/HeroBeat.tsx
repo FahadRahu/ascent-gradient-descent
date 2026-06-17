@@ -62,10 +62,20 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
     const fn = getFunction(u.functionId);
     const runId = runIdentity(u);
 
-    // Run change resets the convergence trackers.
+    // Run change resets the convergence trackers AND the ember ring. The state
+    // machine resets to 'idle' on a runId change, but 'idle' does not touch the
+    // ember — so a ring left visible/scaled-up from a previous run's 'settle'
+    // (or fading from 'diverged') would otherwise persist into the new descent.
+    // Reset it here, the one place that detects a run change.
     if (runId !== heroRef.current.runId) {
       convergedRunRef.current = 0;
       prevCostRef.current = NaN;
+      const e = emberRef.current;
+      if (e) {
+        e.visible = false;
+        e.scale.setScalar(0.001);
+        (e.material as THREE.MeshBasicMaterial).opacity = 0;
+      }
     }
 
     // Trigger evaluation (skipped while diverged — the machine handles that).
