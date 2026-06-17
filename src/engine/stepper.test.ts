@@ -50,6 +50,22 @@ describe('fixed-timestep stepper', () => {
     expect(s.theta.every(Number.isFinite)).toBe(true); // last finite point retained
   });
 
+  it('flags divergence when the COST overflows even though theta stays finite', () => {
+    // Rosenbrock-like failure mode: theta grows huge-but-finite for a step while
+    // the cost (≈100·x⁴) overflows to Infinity first. The stepper MUST treat a
+    // non-finite cost as divergence too — retaining the last point where BOTH
+    // theta and cost were finite, and NEVER recording a non-finite cost (which
+    // would otherwise flow into the path/trail world-height math as NaN/Inf).
+    const overflowCost: CostFn = (t) => (Math.abs(t[0]) > 10 ? Infinity : t[0] * t[0]);
+    const pushGrad: GradFn = () => [-100, 0]; // SGD lr=1 ⇒ x += 100 each step (finite)
+    const opt = makeSGD({ lr: 1 });
+    const s = createStepper({ optimizer: opt, grad: pushGrad, cost: overflowCost, theta0: [0, 0], dt: 0.1 });
+    s.advance(1.0); // step 1 takes x to 100 (finite) but cost→Infinity → diverge here
+    expect(s.diverged).toBe(true);
+    expect(s.theta.every(Number.isFinite)).toBe(true); // last finite theta retained ([0,0])
+    expect(s.history.every((h) => Number.isFinite(h.cost))).toBe(true); // no Inf cost recorded
+  });
+
   it('records history of points for the scrubber (M1)', () => {
     const opt = makeSGD({ lr: 0.1 });
     const s = createStepper({ optimizer: opt, grad, cost, theta0: [1, 1], dt: 0.1 });

@@ -9,6 +9,7 @@ import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
 import { getFunction } from '../engine/functions';
 import { paramToWorldXZ, costToWorldHeight } from './surfaceMapping';
+import { isRenderableWorldXYZ } from './pathGeometry';
 
 /** Resting lift of the trail anchor above the surface (matches the ball core). */
 const TRAIL_LIFT = 0.04;
@@ -53,8 +54,14 @@ export default function DescentTrail({ materialRef }: DescentTrailProps = {}) {
       const fn = getFunction(functionId);
       const [wx, wz] = paramToWorldXZ(theta[0], theta[1], fn.domain);
       const wy = costToWorldHeight(cost, functionId) + TRAIL_LIFT;
-      target.current.set(wx, wy, wz);
-      easing.damp3(anchor.position, target.current, 0.15, delta); // matches the ball
+      // On divergence the world target is non-finite or astronomical (an overflowed
+      // cost → a huge world-Y); damping toward it would feed NaN/Inf into meshline's
+      // bounding-sphere math (a console-flooding warning). Only follow renderable
+      // targets — the ribbon simply holds its last good position past divergence.
+      if (isRenderableWorldXYZ(wx, wy, wz)) {
+        target.current.set(wx, wy, wz);
+        easing.damp3(anchor.position, target.current, 0.15, delta); // matches the ball
+      }
     }
     const mat = trailRef.current?.material as TrailLineMaterial | undefined;
     if (materialRef && mat && materialRef.current !== mat) {

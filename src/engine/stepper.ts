@@ -56,8 +56,8 @@ export function createStepper(config: StepperConfig): Stepper {
 
   const isFinitePair = (v: Vec2): boolean => Number.isFinite(v[0]) && Number.isFinite(v[1]);
 
-  const record = (iteration: number, t: Vec2): void => {
-    history.push({ iteration, theta: t, cost: cost(t) });
+  const record = (iteration: number, t: Vec2, c: number): void => {
+    history.push({ iteration, theta: t, cost: c });
     if (history.length > historyCap) history.shift(); // drop oldest; history[0] = oldest retained — O(n); fine at 4096, revisit for M1c if a larger cap is used
   };
 
@@ -83,13 +83,20 @@ export function createStepper(config: StepperConfig): Stepper {
       while (accumulator >= dt) {
         accumulator -= dt;
         const result = optimizer.step(theta, grad, state);
-        if (!isFinitePair(result.theta)) {
-          diverged = true; // keep the last finite theta; stop
+        // Divergence = the new point is non-finite in EITHER theta or cost. Cost
+        // can overflow (e.g. Rosenbrock ≈100·x⁴ → Infinity) while theta is still
+        // finite, so guard the cost too — otherwise a non-finite cost would be
+        // recorded into history and flow into the path/trail world-height math as
+        // NaN/Inf (crashing TubeGeometry/MeshLine). Retain the last point where
+        // BOTH were finite; stop. (Contract in this file's header docstring.)
+        const nextCost = cost(result.theta);
+        if (!isFinitePair(result.theta) || !Number.isFinite(nextCost)) {
+          diverged = true; // keep the last finite theta+cost; stop
           return;
         }
         theta = result.theta;
         state = result.state;
-        record(state.iteration, theta);
+        record(state.iteration, theta, nextCost);
       }
     },
     reset() {

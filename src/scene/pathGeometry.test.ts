@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import {
   PATH_LIFT,
+  WORLD_RENDER_BOUND,
   historyToWorldPoints,
+  isRenderableWorldXYZ,
   buildTubeGeometry,
   revealProgress,
 } from './pathGeometry';
@@ -30,6 +32,31 @@ describe('pathGeometry — descent ribbon math', () => {
   it('returns null for fewer than 2 points (degenerate curve)', () => {
     expect(buildTubeGeometry([], 64, 0.02, 8)).toBeNull();
     expect(buildTubeGeometry([new THREE.Vector3()], 64, 0.02, 8)).toBeNull();
+  });
+
+  it('drops non-finite OR unrenderable points and returns null if <2 remain (never crashes the loop)', () => {
+    // A divergence run can hand us world points that are NaN/Inf OR finite-but-
+    // astronomical: an overflowed cost (Rosenbrock ≈100·x⁴) maps to a finite world-Y
+    // like 6e222 — which three squares inside CatmullRomCurve3.distanceToSquared
+    // ((6e222)² > Number.MAX_VALUE → Infinity → NaN arc-length index → points[NaN]
+    // is undefined → a TypeError that aborts the render loop). So Number.isFinite is
+    // NOT enough; the render boundary must reject magnitudes beyond WORLD_RENDER_BOUND
+    // (real surface points are within ±2 XZ / ~±2 Y, so 1e6 only ever drops garbage).
+    const finiteA = new THREE.Vector3(0, 0, 0);
+    const finiteB = new THREE.Vector3(1, 0, 0);
+    const inf = new THREE.Vector3(0, Infinity, 0);
+    const nan = new THREE.Vector3(NaN, 0, 0);
+    const huge = new THREE.Vector3(0, 6e222, 0); // finite, but (6e222)² overflows
+    expect(WORLD_RENDER_BOUND).toBeGreaterThan(2); // generous vs the ±2 surface
+    // Two good + a poisoned tail (Inf and finite-but-huge) → builds from the good pair, no throw.
+    expect(() => buildTubeGeometry([finiteA, finiteB, inf, huge], 64, 0.02, 8)).not.toThrow();
+    expect(buildTubeGeometry([finiteA, finiteB, inf, huge], 64, 0.02, 8)).toBeInstanceOf(THREE.TubeGeometry);
+    expect(isRenderableWorldXYZ(huge.x, huge.y, huge.z)).toBe(false); // huge rejected
+    expect(isRenderableWorldXYZ(finiteA.x, finiteA.y, finiteA.z)).toBe(true); // on-surface kept
+    // Only one good point survives → degenerate → null (not a crash).
+    expect(buildTubeGeometry([finiteA, huge, nan], 64, 0.02, 8)).toBeNull();
+    // All bad → null.
+    expect(buildTubeGeometry([inf, nan, huge], 64, 0.02, 8)).toBeNull();
   });
 
   it('builds a TubeGeometry with a uv attribute for >=2 points', () => {
