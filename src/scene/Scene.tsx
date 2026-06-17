@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import * as THREE from 'three';
 import { useUIStore } from '../state/uiStore';
 import { TIER_SETTINGS } from '../quality/tiers';
 import Lights from './Lights';
@@ -11,6 +12,8 @@ import DescentBall from './DescentBall';
 import DescentPath from './DescentPath';
 import DescentTrail from './DescentTrail';
 import PostStack from './PostStack';
+import EmberRing from './EmberRing';
+import HeroBeat from './HeroBeat';
 import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
 
@@ -28,10 +31,10 @@ export function SceneContents() {
   // Channel B's driver. Renders nothing; owns the stepper + writes simStore.
   useSimRunner();
 
-  // The cross-subsystem ref bundle — created once (stable identity). Only
-  // bloom/dof/vignette are populated this phase (by PostStack); ballMaterial /
-  // trailMaterial / pathHalo are wired in Phases B & D.
+  // The single cross-subsystem ref bundle (stable identity). Threaded to every
+  // owner so they populate .current; the whole object is handed to HeroBeat.
   const heroRefs = useMemo(() => createHeroRefs(), []);
+  const emberRef = useRef<THREE.Mesh>(null);
 
   return (
     <>
@@ -54,15 +57,19 @@ export function SceneContents() {
       {/* The stateless ambient swarm — motes streaming downhill over the baked
           flow field. Always mounted; self-gates by tier (fallback renders null). */}
       <Swarm />
-      <DescentBall />
-      {/* Persistent revealed TubeGeometry ribbon (grows with the descent) +
-          the live drei <Trail> streaming behind the ball. Their material handles
-          are wired to heroRefs in Phase D (mounted prop-less here). */}
-      <DescentPath />
-      <DescentTrail />
-      {/* The merged AGX/HalfFloat post-stack — ALWAYS mounted; self-gates by tier
-          (Low/fallback mount no composer and use the renderer-AGX path). */}
+      {/* Ball owns position; lifts its material ref so HeroBeat drives the emissive. */}
+      <DescentBall materialRef={heroRefs.ballMaterial} />
+      {/* Persistent revealed tube; publishes its halo uniform so the cyan/fuchsia
+          cue reads even if the live <Trail> NO-GO'd (PathUniforms ⊇ pathHalo's shape). */}
+      <DescentPath materialUniformsRef={heroRefs.pathHalo} />
+      {/* Live ribbon (publishes its material to the beat for the halo bleed). */}
+      <DescentTrail materialRef={heroRefs.trailMaterial} />
+      {/* The lone ember ring — positioned/animated by HeroBeat in 'settle'. */}
+      <EmberRing ref={emberRef} />
+      {/* Post-stack — ALWAYS mounted, self-gates by tier; populates bloom/dof/vignette. */}
       <PostStack refs={heroRefs} />
+      {/* The integrator — renders nothing; mutates the assembled refs each frame. */}
+      <HeroBeat refs={heroRefs} emberRef={emberRef} />
     </>
   );
 }
