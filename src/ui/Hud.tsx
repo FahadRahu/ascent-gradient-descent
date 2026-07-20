@@ -166,7 +166,7 @@ function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
           <dd><output ref={gradientRef}>(--, --)</output></dd>
         </div>
         <div>
-          <dt>Cost</dt>
+          <dt>Height / cost</dt>
           <dd><output ref={costRef}>--</output></dd>
         </div>
         <div>
@@ -255,6 +255,18 @@ export function Hud() {
           Surface height is loss. The cyan point is the current parameter setting;
           each update follows the amber downhill direction.
         </p>
+
+        <div className="height-cost-cue">
+          <div className="height-scale" aria-hidden="true">
+            <span>High cost</span>
+            <i><b /></i>
+            <span>Low cost</span>
+          </div>
+          <p>
+            <strong>Read the height</strong>
+            Moving downward means the optimizer is reducing cost.
+          </p>
+        </div>
 
         <div className="core-formula" aria-label="Gradient descent update rule">
           <span>&theta;<sub>t+1</sub></span>

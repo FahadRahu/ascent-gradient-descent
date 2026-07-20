@@ -13,6 +13,7 @@ import PostStack from './PostStack';
 import EmberRing from './EmberRing';
 import HeroBeat from './HeroBeat';
 import OptimizationCues from './OptimizationCues';
+import CostAxis from './CostAxis';
 import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
 
@@ -53,6 +54,7 @@ export function SceneContents() {
       <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />
 
       <Surface />
+      <CostAxis />
       {/* The stateless ambient swarm — motes streaming downhill over the baked
           flow field. Always mounted; self-gates by tier (fallback renders null). */}
       <OptimizationCues />
