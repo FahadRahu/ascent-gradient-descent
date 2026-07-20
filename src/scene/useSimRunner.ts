@@ -32,7 +32,7 @@ export function getSimRunnerHandle(): SimRunnerHandle {
  * render frame rate: the stepper is a fixed-timestep accumulator (PRD §8.3), so
  * the descent is identical at 30/60/120 fps. Tunable; a speed control is M1c.
  */
-const SIM_DT = 1 / 30;
+const SIM_DT = 1 / 10;
 
 /**
  * The ONE useFrame that owns the descent (PRD §8.2, the two-channel rule):
@@ -54,6 +54,7 @@ export function useSimRunner(): void {
   const optimizerId = useUIStore((s) => s.optimizerId);
   const learningRate = useUIStore((s) => s.learningRate);
   const startPoint = useUIStore((s) => s.startPoint);
+  const runRevision = useUIStore((s) => s.runRevision);
 
   useEffect(() => {
     const fn = getFunction(functionId);
@@ -87,7 +88,7 @@ export function useSimRunner(): void {
     // We are on frameloop="demand" while paused — force one render so the freshly
     // seeded ball position is drawn immediately.
     invalidate();
-  }, [functionId, optimizerId, learningRate, startPoint, invalidate]);
+  }, [functionId, optimizerId, learningRate, startPoint, runRevision, invalidate]);
 
   useFrame((_, delta) => {
     const stepper = stepperRef.current;

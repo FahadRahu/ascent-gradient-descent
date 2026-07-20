@@ -1,10 +1,14 @@
 import { Scene } from './scene/Scene';
+import { Hud } from './ui/Hud';
 
 function App() {
   return (
-    <div className="w-screen h-screen bg-[#0B0E1A]">
-      <Scene />
-    </div>
+    <main id="main-content" className="app-shell">
+      <div className="scene-layer">
+        <Scene />
+      </div>
+      <Hud />
+    </main>
   );
 }
 

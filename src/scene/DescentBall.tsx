@@ -9,7 +9,7 @@ import { getFunction } from '../engine/functions';
 import { paramToWorldXZ, costToWorldHeight } from './surfaceMapping';
 
 /** Radius of the orb in world units; also its resting offset above the surface. */
-const BALL_RADIUS = 0.08;
+const BALL_RADIUS = 0.095;
 
 export interface DescentBallProps {
   /** Optional external ref to the orb's material so the hero beat can drive its
@@ -61,7 +61,7 @@ export default function DescentBall({ materialRef }: DescentBallProps = {}) {
 
   return (
     <mesh ref={meshRef} castShadow>
-      <sphereGeometry args={[BALL_RADIUS, 32, 32]} />
+      <sphereGeometry args={[BALL_RADIUS, 48, 48]} />
       <meshPhysicalMaterial
         ref={materialRef}
         color="#0a0a0a"

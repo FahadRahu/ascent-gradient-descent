@@ -25,7 +25,6 @@ const SURFACE_GLSL_CONSTS = /* glsl */ `
 
 const SURFACE_UNIFORMS = /* glsl */ `
 uniform int   uFunction;
-uniform float uTime;
 uniform float uVScale;
 uniform vec2  uParamMin;
 uniform vec2  uParamRange;
@@ -87,15 +86,13 @@ void main() {
   // Base colour from the magma ramp (magma() does the [uColorLow,uColorHigh] remap).
   vec3 col = magma(vHeightN);
 
-  // --- fwidth()-anti-aliased contour lines on the parameter grid -----------
-  // Lines every uContourSpacing in parameter space, drifting with -uTime.
-  vec2 coord = vParam / max(uContourSpacing, 1e-4) - vec2(uTime * 0.05);
-  vec2 grid = abs(fract(coord - 0.5) - 0.5) / fwidth(coord);
-  float line = min(grid.x, grid.y);
-  float contour = 1.0 - min(line, 1.0); // 1 on a line, 0 between
-  // Lift the lines toward a cool-white over the magma base (a thin wireframe).
-  vec3 lineColor = mix(col, col + vec3(0.25, 0.30, 0.40), 0.6);
-  col = mix(col, lineColor, contour);
+  // True iso-loss contours: every line joins points with the same cost. This
+  // reads like a topographic map instead of an arbitrary parameter-space grid.
+  float bands = vHeightN / max(uContourSpacing, 1e-4);
+  float contourDistance = abs(fract(bands) - 0.5) / fwidth(bands);
+  float contour = 1.0 - min(contourDistance, 1.0);
+  vec3 lineColor = mix(col, vec3(0.78, 0.86, 0.94), 0.34);
+  col = mix(col, lineColor, contour * 0.72);
 
   vec3 colLin = toLinear(col);
 

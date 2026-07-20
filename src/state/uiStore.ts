@@ -11,6 +11,7 @@ export interface UIState {
   isPlaying: boolean;
   tier: Tier;
   startPoint: readonly [number, number];
+  runRevision: number;
 
   setFunctionId: (id: string) => void;
   setOptimizerId: (id: OptimizerId) => void;
@@ -18,6 +19,7 @@ export interface UIState {
   setPlaying: (playing: boolean) => void;
   setTier: (tier: Tier) => void;
   setStartPoint: (p: readonly [number, number]) => void;
+  restart: () => void;
   reset: () => void;
 }
 
@@ -37,11 +39,21 @@ const INITIAL = {
 
 export const useUIStore = create<UIState>((set) => ({
   ...INITIAL,
+  runRevision: 0,
   setFunctionId: (functionId) => set({ functionId }),
   setOptimizerId: (optimizerId) => set({ optimizerId }),
   setLearningRate: (learningRate) => set({ learningRate: Math.max(1e-9, learningRate) }),
   setPlaying: (isPlaying) => set({ isPlaying }),
   setTier: (tier) => set({ tier }),
   setStartPoint: (startPoint) => set({ startPoint }),
-  reset: () => set({ ...INITIAL }),
+  restart: () =>
+    set((state) => ({
+      isPlaying: false,
+      runRevision: state.runRevision + 1,
+    })),
+  reset: () =>
+    set((state) => ({
+      ...INITIAL,
+      runRevision: state.runRevision + 1,
+    })),
 }));

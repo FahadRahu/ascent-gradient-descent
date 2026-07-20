@@ -2,7 +2,6 @@ import { surfaceVertexShader, surfaceFragmentShader } from './surfaceShaders';
 
 const LOCKED_UNIFORMS = [
   'uFunction',
-  'uTime',
   'uVScale',
   'uParamMin',
   'uParamRange',
@@ -44,9 +43,10 @@ describe('surfaceShaders — vertex + fragment assembly (structure guard)', () =
     expect(surfaceFragmentShader).toContain('magma(');
   });
 
-  it('fragment shader uses fwidth() for the AA contour and animates by -uTime', () => {
+  it('fragment shader uses fwidth() for anti-aliased iso-loss contours', () => {
     expect(surfaceFragmentShader).toMatch(/fwidth\s*\(/);
-    expect(surfaceFragmentShader).toContain('uTime');
+    expect(surfaceFragmentShader).toContain('vHeightN');
+    expect(surfaceFragmentShader).toContain('uContourSpacing');
   });
 
   it('fragment shader applies the soft rolloff e/(1+e) as the LAST emissive op', () => {
@@ -74,7 +74,7 @@ describe('surfaceShaders — vertex + fragment assembly (structure guard)', () =
       expect(surfaceVertexShader, `${u} must be in the vertex shader`).toContain(u);
     }
     // The colour/contour ones must be in the fragment shader specifically.
-    for (const u of ['uColorLow', 'uColorHigh', 'uContourSpacing', 'uTime']) {
+    for (const u of ['uColorLow', 'uColorHigh', 'uContourSpacing']) {
       expect(surfaceFragmentShader, `${u} must be in the fragment shader`).toContain(u);
     }
   });

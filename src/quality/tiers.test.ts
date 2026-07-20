@@ -16,11 +16,11 @@ describe('quality tiers', () => {
 
   it('matches the PRD ladder values (Ultra→Low)', () => {
     expect(TIER_SETTINGS.ultra.dpr).toBe(2.0);
-    expect(TIER_SETTINGS.ultra.surfaceSegments).toBe(128);
+    expect(TIER_SETTINGS.ultra.surfaceSegments).toBe(192);
     expect(TIER_SETTINGS.ultra.ambientParticles).toBe(65536);
-    expect(TIER_SETTINGS.high.surfaceSegments).toBe(64);
-    expect(TIER_SETTINGS.medium.surfaceSegments).toBe(48);
-    expect(TIER_SETTINGS.low.surfaceSegments).toBe(32);
+    expect(TIER_SETTINGS.high.surfaceSegments).toBe(128);
+    expect(TIER_SETTINGS.medium.surfaceSegments).toBe(80);
+    expect(TIER_SETTINGS.low.surfaceSegments).toBe(48);
     expect(TIER_SETTINGS.fallback.mountCanvas).toBe(false);
   });
 });

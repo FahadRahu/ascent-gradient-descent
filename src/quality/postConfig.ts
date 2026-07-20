@@ -45,21 +45,21 @@ export const POST_CONFIG: Record<Tier, PostTierConfig> = {
     mountComposer: true,
     smaaPreset: SMAAPreset.ULTRA,
     n8ao: { quality: 'ultra', halfRes: false },
-    bloom: { intensity: 1.2, levels: 9 },
-    dof: true,
+    bloom: { intensity: 0.9, levels: 9 },
+    dof: false,
   },
   high: {
     mountComposer: true,
     smaaPreset: SMAAPreset.HIGH,
-    n8ao: { quality: 'medium', halfRes: true },
-    bloom: { intensity: 1.2, levels: 9 },
-    dof: true,
+    n8ao: { quality: 'high', halfRes: false },
+    bloom: { intensity: 0.75, levels: 8 },
+    dof: false,
   },
   medium: {
     mountComposer: true,
     smaaPreset: SMAAPreset.HIGH,
     n8ao: { quality: 'low', halfRes: true },
-    bloom: { intensity: 0.8, levels: 7 }, // smaller bloom (spec §5.4)
+    bloom: { intensity: 0.55, levels: 6 }, // smaller bloom (spec §5.4)
     dof: false, // DOF OFF at Medium
   },
   low: {

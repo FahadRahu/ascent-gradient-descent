@@ -113,8 +113,8 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
           easing.damp(ballMat, 'emissiveIntensity', 3.0, 0.2, delta);
           easing.dampC(ballMat.emissive, CORE_CYAN, 0.2, delta);
         }
-        if (bloom) easing.damp(bloom, 'intensity', 1.2, 0.3, delta);
-        if (vignette) easing.damp(vignette, 'darkness', 0.55, 0.3, delta);
+        if (bloom) easing.damp(bloom, 'intensity', 0.75, 0.3, delta);
+        if (vignette) easing.damp(vignette, 'darkness', 0.3, 0.3, delta);
         if (dof) easing.damp(dof, 'bokehScale', 3.0, 0.3, delta);
         break;
       case 'approach':
@@ -132,8 +132,8 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
         }
         if (trailMat) trailMat.color.copy(HALO_CYAN);
         if (pathHalo) pathHalo.uHaloColor.value.copy(PATH_HALO_CYAN);
-        if (bloom) bloom.intensity = THREE.MathUtils.lerp(1.2, 2.6, t);
-        if (vignette) vignette.darkness = THREE.MathUtils.lerp(0.55, 0.72, t);
+        if (bloom) bloom.intensity = THREE.MathUtils.lerp(0.75, 1.5, t);
+        if (vignette) vignette.darkness = THREE.MathUtils.lerp(0.3, 0.42, t);
         if (dof) dof.bokehScale = THREE.MathUtils.lerp(3.0, 1.6, t); // sharpen the rack
         break;
       }
@@ -142,8 +142,8 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
           easing.damp(ballMat, 'emissiveIntensity', 2.2, 0.4, delta);
           easing.dampC(ballMat.emissive, CORE_CYAN, 0.4, delta);
         }
-        if (bloom) easing.damp(bloom, 'intensity', 1.4, 0.5, delta);
-        if (vignette) easing.damp(vignette, 'darkness', 0.55, 0.5, delta);
+        if (bloom) easing.damp(bloom, 'intensity', 0.9, 0.5, delta);
+        if (vignette) easing.damp(vignette, 'darkness', 0.3, 0.5, delta);
         if (dof) easing.damp(dof, 'bokehScale', 3.0, 0.5, delta);
         if (ember) {
           const [wx, wz] = paramToWorldXZ(theta[0], theta[1], fn.domain);
@@ -163,7 +163,7 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
           easing.damp(ballMat, 'emissiveIntensity', 1.0, 0.4, delta); // dim, not white
           easing.dampC(ballMat.emissive, CORE_CYAN, 0.4, delta);
         }
-        if (bloom) easing.damp(bloom, 'intensity', 0.8, 0.4, delta);
+        if (bloom) easing.damp(bloom, 'intensity', 0.45, 0.4, delta);
         if (ember) {
           const mat = ember.material as THREE.MeshBasicMaterial;
           easing.damp(mat, 'opacity', 0, 0.3, delta); // no ember on failure

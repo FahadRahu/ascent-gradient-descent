@@ -30,6 +30,18 @@ describe('UI store (Channel A — slow/reactive)', () => {
     useUIStore.getState().setLearningRate(0.05);
     expect(useUIStore.getState().learningRate).toBe(0.05);
   });
+
+  it('restarts the current setup without resetting its controls', () => {
+    useUIStore.getState().setFunctionId('ackley');
+    useUIStore.getState().setPlaying(true);
+    const before = useUIStore.getState().runRevision;
+
+    useUIStore.getState().restart();
+
+    expect(useUIStore.getState().functionId).toBe('ackley');
+    expect(useUIStore.getState().isPlaying).toBe(false);
+    expect(useUIStore.getState().runRevision).toBe(before + 1);
+  });
 });
 
 describe('Sim store (Channel B — fast/transient)', () => {

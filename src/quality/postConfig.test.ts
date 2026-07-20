@@ -17,11 +17,10 @@ describe('POST_CONFIG — per-tier post-processing config', () => {
     expect(POST_CONFIG.fallback.mountComposer).toBe(false);
   });
 
-  it('turns DOF off at medium and below, on at high/ultra', () => {
-    expect(POST_CONFIG.ultra.dof).toBe(true);
-    expect(POST_CONFIG.high.dof).toBe(true);
-    expect(POST_CONFIG.medium.dof).toBe(false);
-    expect(POST_CONFIG.low.dof).toBe(false);
+  it('keeps depth of field off in the legibility-first view', () => {
+    for (const tier of TIERS) {
+      expect(POST_CONFIG[tier].dof).toBe(false);
+    }
   });
 
   it('uses SMAA ULTRA at ultra, HIGH at high/medium', () => {
@@ -30,9 +29,9 @@ describe('POST_CONFIG — per-tier post-processing config', () => {
     expect(POST_CONFIG.medium.smaaPreset).toBe(SMAAPreset.HIGH);
   });
 
-  it('disables N8AO halfRes only at ultra', () => {
+  it('uses full-resolution AO at high and ultra', () => {
     expect(POST_CONFIG.ultra.n8ao.halfRes).toBe(false);
-    expect(POST_CONFIG.high.n8ao.halfRes).toBe(true);
+    expect(POST_CONFIG.high.n8ao.halfRes).toBe(false);
     expect(POST_CONFIG.medium.n8ao.halfRes).toBe(true);
   });
 

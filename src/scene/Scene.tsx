@@ -7,13 +7,12 @@ import { TIER_SETTINGS } from '../quality/tiers';
 import Lights from './Lights';
 import SceneEnvironment from './SceneEnvironment';
 import { Surface } from './Surface';
-import Swarm from './Swarm';
 import DescentBall from './DescentBall';
 import DescentPath from './DescentPath';
-import DescentTrail from './DescentTrail';
 import PostStack from './PostStack';
 import EmberRing from './EmberRing';
 import HeroBeat from './HeroBeat';
+import OptimizationCues from './OptimizationCues';
 import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
 
@@ -43,7 +42,7 @@ export function SceneContents() {
           background so the plane never reads as a hard-edged card (PRD §5.1).
           M1b note: re-judge density (0.08) at the Task-19 checkpoint vs the AGX
           grade + bloom (PRD §5.4 starts at 0.025). */}
-      <fogExp2 attach="fog" args={[0x0b0e1a, 0.08]} />
+      <fogExp2 attach="fog" args={[0x0b0e1a, 0.04]} />
 
       <Lights />
       {/* M1a environment: self-hosted dark-studio HDRI (PRD §6.2). Chosen at the
@@ -56,14 +55,13 @@ export function SceneContents() {
       <Surface />
       {/* The stateless ambient swarm — motes streaming downhill over the baked
           flow field. Always mounted; self-gates by tier (fallback renders null). */}
-      <Swarm />
+      <OptimizationCues />
       {/* Ball owns position; lifts its material ref so HeroBeat drives the emissive. */}
       <DescentBall materialRef={heroRefs.ballMaterial} />
       {/* Persistent revealed tube; publishes its halo uniform so the cyan/fuchsia
           cue reads even if the live <Trail> NO-GO'd (PathUniforms ⊇ pathHalo's shape). */}
       <DescentPath materialUniformsRef={heroRefs.pathHalo} />
       {/* Live ribbon (publishes its material to the beat for the halo bleed). */}
-      <DescentTrail materialRef={heroRefs.trailMaterial} />
       {/* The lone ember ring — positioned/animated by HeroBeat in 'settle'. */}
       <EmberRing ref={emberRef} />
       {/* Post-stack — ALWAYS mounted, self-gates by tier; populates bloom/dof/vignette. */}
@@ -93,11 +91,26 @@ export function Scene() {
   return (
     <Canvas
       shadows
-      camera={{ position: [3, 3, 3], fov: 50 }}
-      dpr={[1, TIER_SETTINGS[tier].dpr]}
+      camera={{ position: [4.8, 5.4, 5.8], fov: 42 }}
+      dpr={[Math.min(1.5, TIER_SETTINGS[tier].dpr), TIER_SETTINGS[tier].dpr]}
       frameloop={frameloop}
+      onCreated={({ gl }) => {
+        gl.domElement.setAttribute('role', 'img');
+        gl.domElement.setAttribute(
+          'aria-label',
+          'Interactive three-dimensional cost landscape. Drag to orbit and scroll to zoom.',
+        );
+      }}
     >
-      <OrbitControls makeDefault />
+      <OrbitControls
+        makeDefault
+        target={[0, 0.18, 0]}
+        minDistance={4}
+        maxDistance={11}
+        maxPolarAngle={Math.PI / 2.05}
+        enableDamping
+        dampingFactor={0.08}
+      />
       <SceneContents />
     </Canvas>
   );

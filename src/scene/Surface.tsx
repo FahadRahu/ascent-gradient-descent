@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import type { Ref } from 'react';
 import * as THREE from 'three';
-import { useFrame, useThree } from '@react-three/fiber';
+import { useThree } from '@react-three/fiber';
 import CustomShaderMaterial from 'three-custom-shader-material';
 import { useUIStore } from '../state/uiStore';
 import { getFunction } from '../engine/functions';
@@ -19,7 +19,6 @@ import { surfaceVertexShader, surfaceFragmentShader } from './shaders/surfaceSha
 interface SurfaceUniforms {
   [key: string]: { value: unknown };
   uFunction: { value: number };
-  uTime: { value: number };
   uVScale: { value: number };
   uParamMin: { value: THREE.Vector2 };
   uParamRange: { value: THREE.Vector2 };
@@ -73,11 +72,10 @@ export function Surface() {
     const [xMin, xMax, yMin, yMax] = fn.domain;
     return {
       uFunction: { value: FUNCTION_GLSL_INDEX[functionId] ?? 0 },
-      uTime: { value: 0 },
       uVScale: { value: vScaleFor(functionId) },
       uParamMin: { value: new THREE.Vector2(xMin, yMin) },
       uParamRange: { value: new THREE.Vector2(xMax - xMin, yMax - yMin) },
-      uContourSpacing: { value: 0.25 },
+      uContourSpacing: { value: 0.08 },
       uColorLow: { value: 0.12 },
       uColorHigh: { value: 1.0 },
     };
@@ -101,12 +99,6 @@ export function Surface() {
   // would re-render Surface every toggle and the frame callback would close over
   // stale render state. (functionId/tier above ARE reactive subscriptions, but
   // only because they drive the useEffect deps + geometry setup, not this loop.)
-  useFrame((_, delta) => {
-    if (useUIStore.getState().isPlaying) {
-      uniforms.uTime.value += delta;
-    }
-  });
-
   return (
     <mesh rotation-x={-Math.PI / 2} receiveShadow castShadow>
       <planeGeometry args={[SURFACE_SIZE, SURFACE_SIZE, segments, segments]} />
@@ -117,10 +109,10 @@ export function Surface() {
         vertexShader={surfaceVertexShader}
         fragmentShader={surfaceFragmentShader}
         uniforms={uniforms}
-        roughness={0.45}
-        metalness={0.1}
-        clearcoat={0.4}
-        clearcoatRoughness={0.2}
+        roughness={0.5}
+        metalness={0.04}
+        clearcoat={0.28}
+        clearcoatRoughness={0.24}
         dithering
         fog
       />

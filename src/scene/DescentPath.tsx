@@ -12,11 +12,11 @@ import { pathVertexShader, pathFragmentShader } from './shaders/pathShaders';
 import type { HaloUniformRef } from './heroRefs';
 
 /** Slim filament radius; the glow does the rest. */
-const PATH_RADIUS = 0.018;
+const PATH_RADIUS = 0.012;
 
 /** PRD §5.3 trail palette: white-hot core (#FFF4E6) HDR (3.5) + SGD-cyan halo (1.8). */
-const CORE_HDR = new THREE.Color('#FFF4E6').multiplyScalar(3.5); // emissive >1 → blooms
-const HALO_CYAN = new THREE.Color('#00D3F2').multiplyScalar(1.8);
+const CORE_HDR = new THREE.Color('#FFF4E6').multiplyScalar(1.6);
+const HALO_CYAN = new THREE.Color('#00D3F2').multiplyScalar(1.2);
 
 /** Per-tier tube budget (constant vertex count regardless of iteration count). */
 function pathBudget(tier: Tier): { tubular: number; radial: number } {

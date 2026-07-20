@@ -9,12 +9,10 @@ import {
   Bloom,
   DepthOfField,
   SMAA,
-  ChromaticAberration,
   Vignette,
-  Noise,
   ToneMapping,
 } from '@react-three/postprocessing';
-import { ToneMappingMode, BlendFunction, VignetteTechnique } from 'postprocessing';
+import { ToneMappingMode, VignetteTechnique } from 'postprocessing';
 import { easing } from 'maath';
 import { useUIStore } from '../state/uiStore';
 import { simStore } from '../state/simStore';
@@ -159,9 +157,7 @@ export default function PostStack({ refs }: PostStackProps) {
       ? [<DepthOfField key="dof" ref={refs.dof} target={focusTarget} focusRange={0.3} bokehScale={3} resolutionScale={1} />]
       : []),
     <SMAA key="smaa" preset={cfg.smaaPreset} />,
-    <ChromaticAberration key="ca" offset={new THREE.Vector2(0.0008, 0.0005)} blendFunction={BlendFunction.NORMAL} />,
-    <Vignette key="vignette" ref={setVignetteRef} offset={0.35} darkness={0.55} technique={VignetteTechnique.DEFAULT} />,
-    <Noise key="noise" premultiply opacity={0.04} blendFunction={BlendFunction.SCREEN} />,
+    <Vignette key="vignette" ref={setVignetteRef} offset={0.45} darkness={0.3} technique={VignetteTechnique.DEFAULT} />,
     <ToneMapping key="tonemap" mode={ToneMappingMode.AGX} />,
   ];
 
