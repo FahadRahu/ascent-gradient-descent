@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { getSimRunnerHandle } from '../scene/useSimRunner';
 import { simStore } from '../state/simStore';
+import { HelpTooltip } from './HelpTooltip';
 
 const CHART_PADDING = { top: 10, right: 10, bottom: 12, left: 8 };
 
@@ -128,7 +129,15 @@ export function LossChart() {
   return (
     <figure className="loss-chart">
       <figcaption>
-        <span>Loss history</span>
+        <span className="explained-label">
+          <span>Loss history</span>
+          <HelpTooltip
+            id="loss-history-help"
+            label="Loss history"
+            description="Plots cost after each iteration. A downward line means prediction error is shrinking. The log scale keeps large and tiny changes visible."
+            side="top"
+          />
+        </span>
         <span className="chart-scale">log scale</span>
       </figcaption>
       <canvas

@@ -12,6 +12,8 @@ export interface UIState {
   tier: Tier;
   startPoint: readonly [number, number];
   runRevision: number;
+  stepRequest: number;
+  cameraResetRequest: number;
 
   setFunctionId: (id: string) => void;
   setOptimizerId: (id: OptimizerId) => void;
@@ -19,22 +21,21 @@ export interface UIState {
   setPlaying: (playing: boolean) => void;
   setTier: (tier: Tier) => void;
   setStartPoint: (p: readonly [number, number]) => void;
+  stepOnce: () => void;
+  resetCameraView: () => void;
   restart: () => void;
   reset: () => void;
 }
 
 const INITIAL = {
-  functionId: 'rosenbrock',
+  functionId: 'sphere',
   optimizerId: 'sgd' as OptimizerId,
-  // 0.002, not 0.1: SGD at 0.1 on Rosenbrock from (-1.2,1) diverges in ~5 steps
-  // (the gradient there is ≈(-216,-88), so a 0.1 step overshoots off the surface).
-  // 0.002 gives a smooth, monotonic descent down the valley — a good first-run
-  // default. The divergence story is still one slider-crank away (PRD §4.5).
-  // Verified live in the browser at M1a Task 15.
-  learningRate: 0.002,
+  learningRate: 0.1,
   isPlaying: false,
   tier: 'high' as Tier,
-  startPoint: [-1.2, 1] as const,
+  startPoint: [3.5, -2.5] as const,
+  stepRequest: 0,
+  cameraResetRequest: 0,
 };
 
 export const useUIStore = create<UIState>((set) => ({
@@ -46,6 +47,15 @@ export const useUIStore = create<UIState>((set) => ({
   setPlaying: (isPlaying) => set({ isPlaying }),
   setTier: (tier) => set({ tier }),
   setStartPoint: (startPoint) => set({ startPoint }),
+  stepOnce: () =>
+    set((state) => ({
+      isPlaying: false,
+      stepRequest: state.stepRequest + 1,
+    })),
+  resetCameraView: () =>
+    set((state) => ({
+      cameraResetRequest: state.cameraResetRequest + 1,
+    })),
   restart: () =>
     set((state) => ({
       isPlaying: false,

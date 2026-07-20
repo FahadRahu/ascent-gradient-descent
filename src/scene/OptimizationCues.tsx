@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
+import { Html } from '@react-three/drei';
 import { useFrame, useThree } from '@react-three/fiber';
 import type { Vec2 } from '../engine/types';
 import { getFunction } from '../engine/functions';
@@ -82,7 +83,13 @@ function StartMarker({ position }: { position: readonly [number, number, number]
   );
 }
 
-function TargetMarker({ position }: { position: readonly [number, number, number] }) {
+function TargetMarker({
+  position,
+  label,
+}: {
+  position: readonly [number, number, number];
+  label: string;
+}) {
   return (
     <group position={position}>
       <mesh rotation-x={-Math.PI / 2} renderOrder={7}>
@@ -97,6 +104,17 @@ function TargetMarker({ position }: { position: readonly [number, number, number
         <cylinderGeometry args={[0.012, 0.012, 0.11, 12]} />
         <meshBasicMaterial color="#ffb957" depthTest={false} depthWrite={false} toneMapped={false} />
       </mesh>
+      <Html
+        center
+        position={[0, 0.22, 0]}
+        distanceFactor={6}
+        zIndexRange={[3, 1]}
+        style={{ pointerEvents: 'none' }}
+      >
+        <span className="scene-label scene-label-goal" aria-hidden="true">
+          {label}
+        </span>
+      </Html>
     </group>
   );
 }
@@ -215,7 +233,10 @@ export default function OptimizationCues() {
   return (
     <>
       <StartMarker position={worldPoint(functionId, startPoint, 0.055)} />
-      <TargetMarker position={worldPoint(functionId, target, 0.045)} />
+      <TargetMarker
+        position={worldPoint(functionId, target, 0.045)}
+        label={functionId === 'saddle' ? 'Saddle point' : 'Goal: lowest cost'}
+      />
       <DescentDirection />
       <StepMarkers />
     </>

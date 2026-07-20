@@ -26,13 +26,23 @@ export function getSimRunnerHandle(): SimRunnerHandle {
 }
 
 /**
- * Fixed simulation timestep (seconds per optimizer step). 1/30 s ≈ 33 ms/step
- * (~30 steps/s) reads as a clear, teaching-friendly pace — fast enough to feel
- * live, slow enough to follow each step. It is intentionally decoupled from the
- * render frame rate: the stepper is a fixed-timestep accumulator (PRD §8.3), so
- * the descent is identical at 30/60/120 fps. Tunable; a speed control is M1c.
+ * Fixed simulation timestep (seconds per optimizer step). Four steps per second
+ * leaves enough time to see each move and read its cost change. It remains
+ * decoupled from render rate, so the descent is identical at 30/60/120 fps.
  */
-const SIM_DT = 1 / 10;
+export const SIM_DT = 1 / 4;
+
+function publishStepper(stepper: Stepper): void {
+  handle.iteration = stepper.iteration;
+
+  const last = stepper.history[stepper.history.length - 1];
+  const activeFunction = getFunction(useUIStore.getState().functionId);
+  const sim = simStore.getState();
+  sim.setTheta(stepper.theta);
+  sim.setIteration(stepper.iteration);
+  sim.setCost(last?.cost ?? activeFunction.cost(stepper.theta));
+  sim.setDiverged(stepper.diverged);
+}
 
 /**
  * The ONE useFrame that owns the descent (PRD §8.2, the two-channel rule):
@@ -45,6 +55,8 @@ const SIM_DT = 1 / 10;
  */
 export function useSimRunner(): void {
   const stepperRef = useRef<Stepper | null>(null);
+  const handledStepRequest = useRef(useUIStore.getState().stepRequest);
+  const wasPlaying = useRef(false);
   const invalidate = useThree((s) => s.invalidate);
 
   // Channel A → rebuild. Subscribe reactively to the four inputs that define a
@@ -55,6 +67,8 @@ export function useSimRunner(): void {
   const learningRate = useUIStore((s) => s.learningRate);
   const startPoint = useUIStore((s) => s.startPoint);
   const runRevision = useUIStore((s) => s.runRevision);
+  const stepRequest = useUIStore((s) => s.stepRequest);
+  const isPlaying = useUIStore((s) => s.isPlaying);
 
   useEffect(() => {
     const fn = getFunction(functionId);
@@ -90,6 +104,24 @@ export function useSimRunner(): void {
     invalidate();
   }, [functionId, optimizerId, learningRate, startPoint, runRevision, invalidate]);
 
+  useEffect(() => {
+    if (stepRequest === handledStepRequest.current) return;
+    handledStepRequest.current = stepRequest;
+
+    // Reset returns the counter to zero; that state change is not a step.
+    if (stepRequest === 0) return;
+
+    const stepper = stepperRef.current;
+    if (!stepper) return;
+    stepper.advance(SIM_DT);
+    publishStepper(stepper);
+    invalidate();
+  }, [stepRequest, invalidate]);
+
+  useEffect(() => {
+    if (!isPlaying) wasPlaying.current = false;
+  }, [isPlaying]);
+
   useFrame((_, delta) => {
     const stepper = stepperRef.current;
     if (!stepper) return;
@@ -100,17 +132,15 @@ export function useSimRunner(): void {
     // the hook correct if the frameloop policy changes.
     if (!useUIStore.getState().isPlaying) return;
 
-    stepper.advance(delta);
-    handle.iteration = stepper.iteration;
+    // Demand rendering can leave a large clock delta queued while paused. Skip
+    // the first resumed frame and cap later stalls so the lesson never catches
+    // up by taking many invisible optimizer steps at once.
+    if (!wasPlaying.current) {
+      wasPlaying.current = true;
+      return;
+    }
 
-    // Write Channel B once per frame from the post-advance stepper. Cost comes
-    // from the last history entry the stepper recorded this frame (it computes
-    // cost per entry); fall back to recompute only if history is somehow empty.
-    const last = stepper.history[stepper.history.length - 1];
-    const sim = simStore.getState();
-    sim.setTheta(stepper.theta);
-    sim.setIteration(stepper.iteration);
-    sim.setCost(last?.cost ?? getFunction(useUIStore.getState().functionId).cost(stepper.theta));
-    sim.setDiverged(stepper.diverged);
+    stepper.advance(Math.min(delta, SIM_DT));
+    publishStepper(stepper);
   });
 }

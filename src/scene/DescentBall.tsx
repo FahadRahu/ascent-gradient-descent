@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import type { RefObject } from 'react';
-import { useFrame } from '@react-three/fiber';
+import { Html } from '@react-three/drei';
+import { useFrame, useThree } from '@react-three/fiber';
 import { easing } from 'maath';
 import * as THREE from 'three';
 import { simStore } from '../state/simStore';
@@ -38,6 +39,7 @@ export interface DescentBallProps {
  */
 export default function DescentBall({ materialRef }: DescentBallProps = {}) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const invalidate = useThree((state) => state.invalidate);
   // Reusable scratch target so the per-frame math allocates nothing.
   const target = useRef(new THREE.Vector3());
   const functionId = useUIStore((s) => s.functionId);
@@ -57,6 +59,7 @@ export default function DescentBall({ materialRef }: DescentBallProps = {}) {
     target.current.set(worldX, worldY, worldZ);
     // Critically-damped follow (~0.15s); no overshoot, no per-frame allocation.
     easing.damp3(mesh.position, target.current, 0.15, delta);
+    if (mesh.position.distanceToSquared(target.current) > 1e-6) invalidate();
   });
 
   return (
@@ -76,6 +79,17 @@ export default function DescentBall({ materialRef }: DescentBallProps = {}) {
         emissiveIntensity={3.0}
         toneMapped={false}
       />
+      <Html
+        center
+        position={[0, BALL_RADIUS + 0.14, 0]}
+        distanceFactor={6}
+        zIndexRange={[3, 1]}
+        style={{ pointerEvents: 'none' }}
+      >
+        <span className="scene-label scene-label-current" aria-hidden="true">
+          Current point
+        </span>
+      </Html>
     </mesh>
   );
 }

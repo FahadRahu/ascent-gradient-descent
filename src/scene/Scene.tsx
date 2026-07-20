@@ -1,5 +1,5 @@
-import { useMemo, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { useEffect, useMemo, useRef, type ComponentRef } from 'react';
+import { Canvas, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 import { useUIStore } from '../state/uiStore';
@@ -16,6 +16,41 @@ import OptimizationCues from './OptimizationCues';
 import CostAxis from './CostAxis';
 import { createHeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
+
+const DEFAULT_CAMERA_POSITION = [4.8, 5.4, 5.8] as const;
+const DEFAULT_CAMERA_TARGET = [0, 0.18, 0] as const;
+
+function CameraControls() {
+  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
+  const resetRequest = useUIStore((state) => state.cameraResetRequest);
+  const { camera, invalidate } = useThree();
+
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+
+    camera.position.set(...DEFAULT_CAMERA_POSITION);
+    camera.zoom = 1;
+    camera.updateProjectionMatrix();
+    controls.target.set(...DEFAULT_CAMERA_TARGET);
+    controls.update();
+    controls.saveState();
+    invalidate();
+  }, [camera, invalidate, resetRequest]);
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      makeDefault
+      target={DEFAULT_CAMERA_TARGET}
+      minDistance={4}
+      maxDistance={11}
+      maxPolarAngle={Math.PI / 2.05}
+      enableDamping
+      dampingFactor={0.08}
+    />
+  );
+}
 
 /**
  * In-canvas content (no <Canvas> wrapper) — unit-testable with
@@ -93,26 +128,18 @@ export function Scene() {
   return (
     <Canvas
       shadows
-      camera={{ position: [4.8, 5.4, 5.8], fov: 42 }}
+      camera={{ position: DEFAULT_CAMERA_POSITION, fov: 42 }}
       dpr={[Math.min(1.5, TIER_SETTINGS[tier].dpr), TIER_SETTINGS[tier].dpr]}
       frameloop={frameloop}
       onCreated={({ gl }) => {
         gl.domElement.setAttribute('role', 'img');
         gl.domElement.setAttribute(
           'aria-label',
-          'Interactive three-dimensional cost landscape. Drag to orbit and scroll to zoom.',
+          'Interactive three-dimensional cost landscape. Drag to orbit, right-drag to pan, and scroll to zoom.',
         );
       }}
     >
-      <OrbitControls
-        makeDefault
-        target={[0, 0.18, 0]}
-        minDistance={4}
-        maxDistance={11}
-        maxPolarAngle={Math.PI / 2.05}
-        enableDamping
-        dampingFactor={0.08}
-      />
+      <CameraControls />
       <SceneContents />
     </Canvas>
   );
