@@ -1,24 +1,57 @@
-import { useEffect, useMemo, useRef, type ComponentRef } from 'react';
+import {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentRef,
+} from 'react';
 import { Canvas, useThree } from '@react-three/fiber';
-import { OrbitControls } from '@react-three/drei';
+import { OrbitControls, PerformanceMonitor } from '@react-three/drei';
 import * as THREE from 'three';
 import { useUIStore } from '../state/uiStore';
-import { TIER_SETTINGS } from '../quality/tiers';
+import { higherTier, lowerTier, TIER_SETTINGS } from '../quality/tiers';
 import Lights from './Lights';
 import SceneEnvironment from './SceneEnvironment';
 import { Surface } from './Surface';
 import DescentBall from './DescentBall';
 import DescentPath from './DescentPath';
-import PostStack from './PostStack';
 import EmberRing from './EmberRing';
 import HeroBeat from './HeroBeat';
 import OptimizationCues from './OptimizationCues';
 import CostAxis from './CostAxis';
-import { createHeroRefs } from './heroRefs';
+import { createHeroRefs, type HeroRefs } from './heroRefs';
 import { useSimRunner } from './useSimRunner';
+
+const LazyPostStack = lazy(() => import('./PostStack'));
 
 const DEFAULT_CAMERA_POSITION = [4.8, 5.4, 5.8] as const;
 const DEFAULT_CAMERA_TARGET = [0, 0.18, 0] as const;
+
+function DeferredPostStack({ refs }: { refs: HeroRefs }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const requestIdle = window.requestIdleCallback;
+    if (requestIdle) {
+      const handle = requestIdle(() => setReady(true), { timeout: 1_200 });
+      return () => window.cancelIdleCallback(handle);
+    }
+
+    const handle = window.setTimeout(() => setReady(true), 250);
+    return () => window.clearTimeout(handle);
+  }, []);
+
+  if (!ready) return null;
+
+  return (
+    <Suspense fallback={null}>
+      <LazyPostStack refs={refs} />
+    </Suspense>
+  );
+}
 
 function CameraControls() {
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
@@ -70,6 +103,7 @@ export function SceneContents() {
   // owner so they populate .current; the whole object is handed to HeroBeat.
   const heroRefs = useMemo(() => createHeroRefs(), []);
   const emberRef = useRef<THREE.Mesh>(null);
+  const tier = useUIStore((state) => state.tier);
 
   return (
     <>
@@ -86,7 +120,10 @@ export function SceneContents() {
           as pure magma (no cyan clearcoat sheen competing with the colormap). The
           procedural mode stays available via the swappable <SceneEnvironment>
           boundary (mode="procedural") for the M1b post-stack revisit. */}
-      <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />
+      <SceneEnvironment
+        mode={tier === 'low' || tier === 'medium' ? 'procedural' : 'hdr'}
+        hdr="/hdri/satara_night_no_lamps_1k.hdr"
+      />
 
       <Surface />
       <CostAxis />
@@ -102,20 +139,70 @@ export function SceneContents() {
       {/* The lone ember ring — positioned/animated by HeroBeat in 'settle'. */}
       <EmberRing ref={emberRef} />
       {/* Post-stack — ALWAYS mounted, self-gates by tier; populates bloom/dof/vignette. */}
-      <PostStack refs={heroRefs} />
+      <DeferredPostStack refs={heroRefs} />
       {/* The integrator — renders nothing; mutates the assembled refs each frame. */}
       <HeroBeat refs={heroRefs} emberRef={emberRef} />
     </>
   );
 }
 
+function AdaptiveQuality() {
+  const tier = useUIStore((state) => state.tier);
+  const ceiling = useUIStore((state) => state.qualityCeiling);
+  const setTier = useUIStore((state) => state.setTier);
+
+  const decline = useCallback(() => {
+    const next = lowerTier(tier);
+    if (next !== tier) setTier(next);
+  }, [setTier, tier]);
+
+  const incline = useCallback(() => {
+    const next = higherTier(tier, ceiling);
+    if (next !== tier) setTier(next);
+  }, [ceiling, setTier, tier]);
+
+  return (
+    <PerformanceMonitor
+      iterations={8}
+      ms={300}
+      threshold={0.7}
+      flipflops={3}
+      onDecline={decline}
+      onIncline={incline}
+      onFallback={() => setTier('low')}
+    />
+  );
+}
+
+function ContextLossListener({ onFailure }: { onFailure?: () => void }) {
+  const gl = useThree((state) => state.gl);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const onContextLost = (event: Event) => {
+      event.preventDefault();
+      onFailure?.();
+    };
+    canvas.addEventListener('webglcontextlost', onContextLost);
+    return () => canvas.removeEventListener('webglcontextlost', onContextLost);
+  }, [gl, onFailure]);
+
+  return null;
+}
+
+export interface SceneProps {
+  onReady?: () => void;
+  onFailure?: () => void;
+}
+
 /** App-facing scene: the real Canvas wrapper. */
-export function Scene() {
+export function Scene({ onReady, onFailure }: SceneProps) {
   // Reactive (Channel A) reads. These change rarely and re-rendering <Scene> to
   // update Canvas props (frameloop/dpr) is correct — it does NOT re-render the
   // in-canvas tree's transient state.
   const isPlaying = useUIStore((s) => s.isPlaying);
   const tier = useUIStore((s) => s.tier);
+  const settings = TIER_SETTINGS[tier];
 
   // Power discipline (PRD §8.3): render every frame only while the descent is
   // animating; otherwise render on demand (camera moves call invalidate() via
@@ -125,11 +212,17 @@ export function Scene() {
   // delta (fixed-timestep accumulator), so the descent is unaffected.
   const frameloop = isPlaying ? 'always' : 'demand';
 
+  useEffect(() => {
+    if (!settings.mountCanvas) onFailure?.();
+  }, [onFailure, settings.mountCanvas]);
+
+  if (!settings.mountCanvas) return null;
+
   return (
     <Canvas
-      shadows
+      shadows={settings.shadowMapSize > 0 ? 'basic' : false}
       camera={{ position: DEFAULT_CAMERA_POSITION, fov: 42 }}
-      dpr={[Math.min(1.5, TIER_SETTINGS[tier].dpr), TIER_SETTINGS[tier].dpr]}
+      dpr={[Math.min(1.5, settings.dpr), settings.dpr]}
       frameloop={frameloop}
       onCreated={({ gl }) => {
         gl.domElement.setAttribute('role', 'img');
@@ -137,8 +230,11 @@ export function Scene() {
           'aria-label',
           'Interactive three-dimensional cost landscape. Drag to orbit, right-drag to pan, and scroll to zoom.',
         );
+        onReady?.();
       }}
     >
+      <AdaptiveQuality />
+      <ContextLossListener onFailure={onFailure} />
       <CameraControls />
       <SceneContents />
     </Canvas>

@@ -5,10 +5,11 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { easing } from 'maath';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
+import { getSimRunnerHandle } from '../state/simHistory';
 import { getFunction } from '../engine/functions';
 import type { Vec2 } from '../engine/types';
 import { paramToWorldXZ, costToWorldHeight } from './surfaceMapping';
-import { evaluateArrival } from './heroTrigger';
+import { createArrivalTracker, trackArrival } from './heroTrigger';
 import { advanceHero, initialHeroState, heroNeedsFrames, type HeroState } from './heroState';
 import type { HeroRefs } from './heroRefs';
 
@@ -28,16 +29,6 @@ export interface HeroBeatProps {
   emberRef: RefObject<THREE.Mesh | null>;
 }
 
-/** Build the per-run identity string from Channel A (pure; read inside the frame). */
-function runIdentity(u: {
-  functionId: string;
-  optimizerId: string;
-  learningRate: number;
-  startPoint: readonly [number, number];
-}): string {
-  return `${u.functionId}|${u.optimizerId}|${u.learningRate}|${u.startPoint.join(',')}`;
-}
-
 /**
  * The hero arrival beat controller (spec §5.6). Renders nothing. One useFrame
  * reads simStore TRANSIENTLY, runs the arrival trigger + state machine, and
@@ -50,8 +41,7 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
   const invalidate = useThree((s) => s.invalidate);
 
   const heroRef = useRef<HeroState>(initialHeroState(''));
-  const prevCostRef = useRef<number>(NaN);
-  const convergedRunRef = useRef<number>(0);
+  const arrivalTrackerRef = useRef(createArrivalTracker());
   const tmpColor = useMemo(() => new THREE.Color(), []);
   const emberTarget = useMemo(() => new THREE.Vector3(), []);
 
@@ -60,7 +50,8 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
     const { theta, cost, diverged } = simStore.getState();
     const u = useUIStore.getState();
     const fn = getFunction(u.functionId);
-    const runId = runIdentity(u);
+    const simulation = getSimRunnerHandle();
+    const runId = String(simulation.runId);
 
     // Run change resets the convergence trackers AND the ember ring. The state
     // machine resets to 'idle' on a runId change, but 'idle' does not touch the
@@ -68,8 +59,6 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
     // (or fading from 'diverged') would otherwise persist into the new descent.
     // Reset it here, the one place that detects a run change.
     if (runId !== heroRef.current.runId) {
-      convergedRunRef.current = 0;
-      prevCostRef.current = NaN;
       const e = emberRef.current;
       if (e) {
         e.visible = false;
@@ -81,18 +70,17 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
     // Trigger evaluation (skipped while diverged — the machine handles that).
     let arrived = false;
     if (!diverged) {
-      const res = evaluateArrival({
+      const tracked = trackArrival(arrivalTrackerRef.current, {
+        runId: simulation.runId,
+        iteration: simulation.iteration,
         theta: theta as Vec2,
         cost,
-        prevCost: prevCostRef.current,
         minima: fn.minima as readonly Vec2[],
         domain: fn.domain,
-        convergedRun: convergedRunRef.current,
       });
-      arrived = res.arrived;
-      convergedRunRef.current = res.converging ? convergedRunRef.current + 1 : 0;
+      arrivalTrackerRef.current = tracked.tracker;
+      arrived = tracked.result.arrived;
     }
-    prevCostRef.current = cost;
 
     // Advance the machine.
     const next = advanceHero(heroRef.current, { arrived, diverged, runId }, dtMs);

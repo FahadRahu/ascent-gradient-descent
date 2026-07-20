@@ -1,3 +1,5 @@
+import { isCostAtGoal } from '../engine/goal';
+
 export type CostStepState =
   | 'ready'
   | 'decreased'
@@ -21,14 +23,11 @@ export function classifyCostStep(
     return { state: 'diverged', change: 0 };
   }
 
-  if (goalCost !== null && Number.isFinite(goalCost)) {
-    const goalTolerance = Math.max(0.001, Math.abs(goalCost) * 0.0001);
-    if (Math.abs(currentCost - goalCost) <= goalTolerance) {
-      return {
-        state: 'reached',
-        change: previousCost === null ? 0 : Math.abs(currentCost - previousCost),
-      };
-    }
+  if (isCostAtGoal(currentCost, goalCost)) {
+    return {
+      state: 'reached',
+      change: previousCost === null ? 0 : Math.abs(currentCost - previousCost),
+    };
   }
 
   if (previousCost === null || !Number.isFinite(previousCost)) {

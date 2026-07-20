@@ -87,7 +87,7 @@ export const FUNCTIONS: readonly CostFunction[] = [
     expr: 'x^2 - y^2',
     minima: [[0, 0]], // a saddle, not a minimum — see teaches
     domain: [-3, 3, -3, 3],
-    teaches: 'momentum vs Adam behavior at saddles',
+    teaches: 'advanced: no minimum; one direction descends without bound',
   }),
   fromExpr({
     id: 'himmelblau',

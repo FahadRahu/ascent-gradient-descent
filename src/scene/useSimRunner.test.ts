@@ -1,4 +1,5 @@
-import { getSimRunnerHandle, SIM_DT } from './useSimRunner';
+import { SIM_DT } from './useSimRunner';
+import { getSimRunnerHandle } from '../state/simHistory';
 
 describe('useSimRunner — Channel-B history handle', () => {
   it('exposes a read-only handle with history/iteration/runId', () => {

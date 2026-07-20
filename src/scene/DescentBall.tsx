@@ -7,10 +7,24 @@ import * as THREE from 'three';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
 import { getFunction } from '../engine/functions';
+import type { Vec2 } from '../engine/types';
 import { paramToWorldXZ, costToWorldHeight } from './surfaceMapping';
+import type { Domain } from './surfaceMapping.types';
 
 /** Radius of the orb in world units; also its resting offset above the surface. */
 const BALL_RADIUS = 0.095;
+const LABEL_COLLISION_FRAC = 0.1;
+
+export function shouldShowCurrentLabel(
+  theta: Vec2,
+  target: Vec2,
+  domain: Domain,
+): boolean {
+  const [xMin, xMax, yMin, yMax] = domain;
+  const extent = Math.max(xMax - xMin, yMax - yMin);
+  return Math.hypot(theta[0] - target[0], theta[1] - target[1]) / extent >=
+    LABEL_COLLISION_FRAC;
+}
 
 export interface DescentBallProps {
   /** Optional external ref to the orb's material so the hero beat can drive its
@@ -39,6 +53,7 @@ export interface DescentBallProps {
  */
 export default function DescentBall({ materialRef }: DescentBallProps = {}) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const labelRef = useRef<HTMLSpanElement>(null);
   const invalidate = useThree((state) => state.invalidate);
   // Reusable scratch target so the per-frame math allocates nothing.
   const target = useRef(new THREE.Vector3());
@@ -50,6 +65,14 @@ export default function DescentBall({ materialRef }: DescentBallProps = {}) {
 
     const { theta, cost } = simStore.getState();
     const fn = getFunction(functionId);
+    const showLabel = shouldShowCurrentLabel(
+      theta,
+      fn.minima[0] as Vec2,
+      fn.domain,
+    );
+    if (labelRef.current && labelRef.current.hidden === showLabel) {
+      labelRef.current.hidden = !showLabel;
+    }
 
     // Param-space (θx, θy) → world XZ on the SURFACE_SIZE plane.
     const [worldX, worldZ] = paramToWorldXZ(theta[0], theta[1], fn.domain);
@@ -86,7 +109,11 @@ export default function DescentBall({ materialRef }: DescentBallProps = {}) {
         zIndexRange={[3, 1]}
         style={{ pointerEvents: 'none' }}
       >
-        <span className="scene-label scene-label-current" aria-hidden="true">
+        <span
+          ref={labelRef}
+          className="scene-label scene-label-current"
+          aria-hidden="true"
+        >
           Current point
         </span>
       </Html>

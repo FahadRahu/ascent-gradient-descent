@@ -6,7 +6,7 @@ import type { Vec2 } from '../engine/types';
 import { getFunction } from '../engine/functions';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
-import { getSimRunnerHandle } from './useSimRunner';
+import { getSimRunnerHandle } from '../state/simHistory';
 import {
   SURFACE_SIZE,
   costToWorldHeight,

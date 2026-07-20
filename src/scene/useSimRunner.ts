@@ -3,10 +3,14 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { getFunction } from '../engine/functions/registry';
 import { makeOptimizer } from '../engine/optimizers/registry';
 import { createStepper, type Stepper } from '../engine/stepper';
-import type { HistoryEntry } from '../engine/stepper';
 import type { Vec2 } from '../engine/types';
+import { goalCostForFunction, isCostAtGoal } from '../engine/goal';
 import { useUIStore } from '../state/uiStore';
 import { simStore } from '../state/simStore';
+import {
+  publishSimRunnerIteration,
+  resetSimRunnerHandle,
+} from '../state/simHistory';
 
 /**
  * Channel-B handle onto the live run for read-only per-frame consumers (the
@@ -15,15 +19,7 @@ import { simStore } from '../state/simStore';
  * a run change (function/optimizer/lr/startPoint) and reset their geometry. Read
  * transiently inside useFrame — never subscribe.
  */
-export interface SimRunnerHandle {
-  history: readonly HistoryEntry[];
-  iteration: number;
-  runId: number;
-}
-const handle: SimRunnerHandle = { history: [], iteration: 0, runId: 0 };
-export function getSimRunnerHandle(): SimRunnerHandle {
-  return handle;
-}
+export { getSimRunnerHandle } from '../state/simHistory';
 
 /**
  * Fixed simulation timestep (seconds per optimizer step). Four steps per second
@@ -33,15 +29,23 @@ export function getSimRunnerHandle(): SimRunnerHandle {
 export const SIM_DT = 1 / 4;
 
 function publishStepper(stepper: Stepper): void {
-  handle.iteration = stepper.iteration;
+  publishSimRunnerIteration(stepper.iteration);
 
   const last = stepper.history[stepper.history.length - 1];
-  const activeFunction = getFunction(useUIStore.getState().functionId);
+  const ui = useUIStore.getState();
+  const activeFunction = getFunction(ui.functionId);
+  const cost = last?.cost ?? activeFunction.cost(stepper.theta);
   const sim = simStore.getState();
   sim.setTheta(stepper.theta);
   sim.setIteration(stepper.iteration);
-  sim.setCost(last?.cost ?? activeFunction.cost(stepper.theta));
+  sim.setCost(cost);
   sim.setDiverged(stepper.diverged);
+
+  if (stepper.diverged) {
+    ui.setRunOutcome('diverged');
+  } else if (isCostAtGoal(cost, goalCostForFunction(activeFunction))) {
+    ui.setRunOutcome('converged');
+  }
 }
 
 /**
@@ -88,9 +92,8 @@ export function useSimRunner(): void {
 
     // Publish the fresh run to the Channel-B handle and bump runId so the path
     // resets its geometry to the reseeded single-point history.
-    handle.history = stepper.history;
-    handle.iteration = 0;
-    handle.runId += 1;
+    resetSimRunnerHandle(stepper.history);
+    useUIStore.getState().setRunOutcome('active');
 
     // Seed Channel B at θ₀ so the ball is correctly placed even before play.
     const sim = simStore.getState();

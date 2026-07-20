@@ -4,7 +4,6 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type MouseEvent,
 } from 'react';
 import { createPortal } from 'react-dom';
@@ -103,17 +102,21 @@ export function HelpTooltip({
       setHovered(false);
     };
 
-    document.addEventListener('pointerdown', onPointerDown);
-    return () => document.removeEventListener('pointerdown', onPointerDown);
-  }, [isOpen]);
+    const onEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      setPinned(false);
+      setFocused(false);
+      setHovered(false);
+      triggerRef.current?.blur();
+    };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key !== 'Escape') return;
-    setPinned(false);
-    setFocused(false);
-    setHovered(false);
-    event.currentTarget.blur();
-  };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onEscape);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onEscape);
+    };
+  }, [isOpen]);
 
   const onClick = (event: MouseEvent<HTMLButtonElement>) => {
     if (isPinned) {
@@ -147,7 +150,6 @@ export function HelpTooltip({
         onClick={onClick}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        onKeyDown={onKeyDown}
       >
         <CircleHelp size={14} aria-hidden="true" />
       </button>

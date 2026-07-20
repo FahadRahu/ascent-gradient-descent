@@ -3,6 +3,7 @@ import {
   Activity,
   ArrowRight,
   ChevronDown,
+  CircleCheck,
   Crosshair,
   Gauge,
   Map as MapIcon,
@@ -17,12 +18,14 @@ import {
   OPTIMIZER_IDS,
 } from '../engine/optimizers/registry';
 import type { OptimizerId } from '../engine/types';
+import { goalCostForFunction } from '../engine/goal';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
-import { getSimRunnerHandle } from '../scene/useSimRunner';
+import { getSimRunnerHandle } from '../state/simHistory';
 import { classifyCostStep, type CostStepState } from './costFeedback';
 import { HelpTooltip } from './HelpTooltip';
 import { LossChart } from './LossChart';
+import type { GraphicsStatus } from './GraphicsState';
 
 const START_POINTS: Record<string, readonly [number, number]> = {
   sphere: [3.5, -2.5],
@@ -112,9 +115,16 @@ function formatCost(value: number): string {
 interface LiveSignalProps {
   functionId: string;
   isPlaying: boolean;
+  runOutcome: 'active' | 'converged' | 'diverged';
+  graphicsStatus: GraphicsStatus;
 }
 
-function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
+function LiveSignal({
+  functionId,
+  isPlaying,
+  runOutcome,
+  graphicsStatus,
+}: LiveSignalProps) {
   const thetaRef = useRef<HTMLOutputElement>(null);
   const gradientRef = useRef<HTMLOutputElement>(null);
   const costRef = useRef<HTMLOutputElement>(null);
@@ -132,24 +142,45 @@ function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
 
     const update = () => {
       pendingFrame = 0;
+      if (graphicsStatus !== 'ready') {
+        const status = graphicsStatus === 'loading' ? 'Loading' : 'Unavailable';
+        if (thetaRef.current) thetaRef.current.textContent = '(--, --)';
+        if (gradientRef.current) gradientRef.current.textContent = '(--, --)';
+        if (costRef.current) costRef.current.textContent = '--';
+        if (iterationRef.current) iterationRef.current.textContent = '0';
+        if (stepBeforeRef.current) stepBeforeRef.current.textContent = '--';
+        if (stepAfterRef.current) stepAfterRef.current.textContent = '--';
+        if (goalCostRef.current) goalCostRef.current.textContent = '--';
+        if (stepMessageRef.current) {
+          stepMessageRef.current.textContent =
+            graphicsStatus === 'loading'
+              ? 'Preparing the interactive cost landscape.'
+              : 'The optimization is paused because the graphics view is unavailable.';
+        }
+        if (stepResultRef.current) stepResultRef.current.dataset.state = 'ready';
+        if (statusRef.current) {
+          statusRef.current.textContent = status;
+          statusRef.current.dataset.state = status.toLowerCase();
+        }
+        return;
+      }
+
       const state = simStore.getState();
       const gradient = fn.grad(state.theta);
       const handle = getSimRunnerHandle();
       const history = handle.history;
       const currentEntry = history[history.length - 1];
       const previousEntry = history[history.length - 2];
-      const goalCost = functionId === 'saddle'
-        ? null
-        : Math.min(...fn.minima.map((minimum) => fn.cost(minimum)));
+      const goalCost = goalCostForFunction(fn);
       const feedback = classifyCostStep(
         previousEntry?.cost ?? null,
         currentEntry?.cost ?? state.cost,
         goalCost,
         state.diverged,
       );
-      const status = state.diverged
+      const status = runOutcome === 'diverged' || state.diverged
         ? 'Diverged'
-        : feedback.state === 'reached'
+        : runOutcome === 'converged' || feedback.state === 'reached'
           ? 'At minimum'
           : isPlaying
             ? 'Descending'
@@ -184,11 +215,11 @@ function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
       }
       if (stepMessageRef.current) {
         const messages: Record<CostStepState, string> = {
-          ready: 'Measure how the error changes, then take one downhill step.',
-          decreased: `Cost decreased by ${formatCost(feedback.change)}. Prediction error got smaller.`,
-          increased: `Cost increased by ${formatCost(feedback.change)}. Prediction error got worse; the learning rate may be too high.`,
-          unchanged: 'Cost barely changed. The error surface may be nearly flat here.',
-          reached: 'Minimum reached. The prediction-error score is at the goal.',
+          ready: 'Measure the objective, then take one downhill step.',
+          decreased: `Cost decreased by ${formatCost(feedback.change)}. The objective improved.`,
+          increased: `Cost increased by ${formatCost(feedback.change)}. The step moved uphill; the learning rate may be too high.`,
+          unchanged: 'Cost barely changed. The objective surface may be nearly flat here.',
+          reached: 'Minimum reached. The objective is within the goal tolerance.',
           diverged: 'The run diverged. Lower the learning rate, then reset.',
         };
         stepMessageRef.current.textContent = messages[feedback.state];
@@ -213,7 +244,7 @@ function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
       unsubscribe();
       if (pendingFrame !== 0) window.cancelAnimationFrame(pendingFrame);
     };
-  }, [functionId, isPlaying]);
+  }, [functionId, graphicsStatus, isPlaying, runOutcome]);
 
   return (
     <section className="live-signal" aria-labelledby="live-signal-title">
@@ -239,12 +270,12 @@ function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
           <span>Goal cost <output ref={goalCostRef}>--</output></span>
         </div>
         <div className="step-cost-change" aria-label="Cost before and after the latest step">
-          <span>Cost <small>(error)</small></span>
+          <span>Cost <small>(objective)</small></span>
           <output ref={stepBeforeRef}>--</output>
           <ArrowRight size={14} aria-hidden="true" />
           <output ref={stepAfterRef}>--</output>
         </div>
-        <p ref={stepMessageRef}>Measure how the error changes, then take one downhill step.</p>
+        <p ref={stepMessageRef}>Measure the objective, then take one downhill step.</p>
       </div>
       <dl className="metrics-grid">
         <div>
@@ -268,11 +299,12 @@ function LiveSignal({ functionId, isPlaying }: LiveSignalProps) {
   );
 }
 
-export function Hud() {
+export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
   const functionId = useUIStore((state) => state.functionId);
   const optimizerId = useUIStore((state) => state.optimizerId);
   const learningRate = useUIStore((state) => state.learningRate);
   const isPlaying = useUIStore((state) => state.isPlaying);
+  const runOutcome = useUIStore((state) => state.runOutcome);
   const setFunctionId = useUIStore((state) => state.setFunctionId);
   const setOptimizerId = useUIStore((state) => state.setOptimizerId);
   const setLearningRate = useUIStore((state) => state.setLearningRate);
@@ -284,6 +316,9 @@ export function Hud() {
   const activeFunction = getFunction(functionId);
   const activeOptimizer = OPTIMIZER_META[optimizerId];
   const learningRateEnabled = optimizerId !== 'newton';
+  const controlsReady = graphicsStatus === 'ready';
+  const configurationEnabled = graphicsStatus !== 'unavailable';
+  const runTerminal = runOutcome !== 'active';
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -298,6 +333,8 @@ export function Hud() {
         return;
       }
 
+      if (!controlsReady) return;
+
       if (event.code === 'Space') {
         event.preventDefault();
         const store = useUIStore.getState();
@@ -309,7 +346,7 @@ export function Hud() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [controlsReady]);
 
   const onFunctionChange = (event: ChangeEvent<HTMLSelectElement>) => {
     const nextId = event.target.value;
@@ -330,6 +367,18 @@ export function Hud() {
     setLearningRate(10 ** Number(event.target.value));
   };
 
+  const primaryLabel = graphicsStatus === 'loading'
+    ? 'Loading view'
+    : graphicsStatus === 'unavailable'
+      ? 'Unavailable'
+      : runOutcome === 'converged'
+        ? 'Minimum reached'
+        : runOutcome === 'diverged'
+          ? 'Run stopped'
+          : isPlaying
+            ? 'Pause'
+            : 'Run descent';
+
   return (
     <div className="hud-layer">
       <header className="brand-bar">
@@ -342,13 +391,15 @@ export function Hud() {
 
       <section className="concept-panel" aria-labelledby="concept-title">
         <span className="eyebrow">The idea</span>
-        <h1 id="concept-title">Find the lowest point.</h1>
+        <h1 id="concept-title">
+          {functionId === 'saddle' ? 'See why saddles are tricky.' : 'Find the lowest point.'}
+        </h1>
         <div className="cost-definition">
           <span>What is cost?</span>
           <p>
-            <strong>Cost measures prediction error.</strong> It often averages how
-            far a model's predictions are from the actual data. Lower is better,
-            so gradient descent tries to minimize it.
+            <strong>Cost is the score gradient descent tries to lower.</strong> In
+            machine learning it often averages prediction error. This lab uses
+            simple mathematical surfaces as stand-ins for real loss landscapes.
           </p>
         </div>
 
@@ -360,8 +411,8 @@ export function Hud() {
           </div>
           <p>
             <strong>Read the height</strong>
-            Higher points mean more prediction error. Moving downward means the
-            model is improving.
+            Higher points mean a larger objective value. Moving downward means the
+            optimizer is lowering cost.
           </p>
         </div>
 
@@ -372,12 +423,21 @@ export function Hud() {
           <span className="formula-operation">
             &minus; &eta;&nabla;J(&theta;<sub>t</sub>)
           </span>
+          <HelpTooltip
+            id="gradient-descent-formula-help"
+            label="Gradient descent formula"
+            description="Theta at t is the current position, theta at t+1 is the next position, eta is the learning rate or step size, and grad J is the uphill slope of the cost. Subtracting that slope moves the point downhill toward lower cost."
+          />
         </div>
 
         <div className="learning-loop">
           <div className="learning-loop-heading">
             <span>Every iteration</span>
-            <span>Repeat until the cost is low</span>
+            <span>
+              {functionId === 'saddle'
+                ? 'Watch what happens without a minimum'
+                : 'Repeat until the cost is low'}
+            </span>
           </div>
           <ol aria-label="Gradient descent iteration loop">
             <li><span>01</span><strong>Measure slope</strong></li>
@@ -412,13 +472,22 @@ export function Hud() {
           <li>
             <span className="legend-swatch target" aria-hidden="true" />
             <div>
-              <strong>Minimum</strong>
-              <p>The amber rings mark the target.</p>
+              <strong>{functionId === 'saddle' ? 'Saddle point' : 'Minimum'}</strong>
+              <p>
+                {functionId === 'saddle'
+                  ? 'The amber rings mark a stationary point, not a minimum.'
+                  : 'The amber rings mark the target.'}
+              </p>
             </div>
           </li>
         </ul>
 
-        <LiveSignal functionId={functionId} isPlaying={isPlaying} />
+        <LiveSignal
+          functionId={functionId}
+          isPlaying={isPlaying}
+          runOutcome={runOutcome}
+          graphicsStatus={graphicsStatus}
+        />
       </section>
 
       <aside className="control-panel" aria-labelledby="setup-title">
@@ -439,9 +508,12 @@ export function Hud() {
               id="landscape-select"
               value={functionId}
               onChange={onFunctionChange}
+              disabled={!configurationEnabled}
             >
               {FUNCTIONS.map((fn) => (
-                <option key={fn.id} value={fn.id}>{fn.name}</option>
+                <option key={fn.id} value={fn.id}>
+                  {fn.id === 'saddle' ? `${fn.name} (advanced)` : fn.name}
+                </option>
               ))}
             </select>
             <ChevronDown size={16} aria-hidden="true" />
@@ -458,6 +530,7 @@ export function Hud() {
               id="optimizer-select"
               value={optimizerId}
               onChange={onOptimizerChange}
+              disabled={!configurationEnabled}
             >
               {OPTIMIZER_IDS.map((id) => (
                 <option key={id} value={id}>{OPTIMIZER_META[id].label}</option>
@@ -492,7 +565,7 @@ export function Hud() {
             step="0.05"
             value={Math.log10(learningRate)}
             onChange={onLearningRateChange}
-            disabled={!learningRateEnabled}
+            disabled={!configurationEnabled || !learningRateEnabled}
           />
           <div className="range-labels" aria-hidden="true">
             <span>precise</span>
@@ -521,16 +594,24 @@ export function Hud() {
           type="button"
           className="primary-action"
           aria-pressed={isPlaying}
+          disabled={!controlsReady || runTerminal}
           onClick={() => setPlaying(!isPlaying)}
         >
-          {isPlaying ? <Pause size={17} fill="currentColor" /> : <Play size={17} fill="currentColor" />}
-          <span>{isPlaying ? 'Pause' : 'Run descent'}</span>
+          {runOutcome === 'converged' ? (
+            <CircleCheck size={17} aria-hidden="true" />
+          ) : isPlaying ? (
+            <Pause size={17} fill="currentColor" aria-hidden="true" />
+          ) : (
+            <Play size={17} fill="currentColor" aria-hidden="true" />
+          )}
+          <span>{primaryLabel}</span>
         </button>
         <button
           type="button"
           className="secondary-action"
           aria-label="Advance one iteration"
           title="Advance exactly one iteration"
+          disabled={!controlsReady || runTerminal}
           onClick={stepOnce}
         >
           <StepForward size={17} />
@@ -541,6 +622,7 @@ export function Hud() {
           className="icon-button"
           aria-label="Restart optimization"
           title="Restart optimization"
+          disabled={!controlsReady}
           onClick={restart}
         >
           <RotateCcw size={17} />
@@ -550,6 +632,7 @@ export function Hud() {
           className="icon-button"
           aria-label="Reset camera view"
           title="Reset camera view"
+          disabled={!controlsReady}
           onClick={resetCameraView}
         >
           <Crosshair size={17} />

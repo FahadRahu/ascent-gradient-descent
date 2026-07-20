@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { simStore } from '../state/simStore';
+import { resetSimRunnerHandle } from '../state/simHistory';
 import { useUIStore } from '../state/uiStore';
 import { createHeroRefs } from './heroRefs';
 import HeroBeat from './HeroBeat';
@@ -18,6 +19,7 @@ describe('HeroBeat (R3F structure smoke)', () => {
     simStore.getState().setTheta([0.02, 0.02]);
     simStore.getState().setCost(0.0008);
     simStore.getState().setDiverged(false);
+    resetSimRunnerHandle([{ iteration: 0, theta: [0.02, 0.02], cost: 0.0008 }]);
 
     const refs = createHeroRefs();
     const ballMat = new THREE.MeshPhysicalMaterial({ emissive: '#00D3F2', emissiveIntensity: 3 });
@@ -45,6 +47,7 @@ describe('HeroBeat (R3F structure smoke)', () => {
     simStore.getState().setTheta([3, 3]); // far from the minimum → not arrived
     simStore.getState().setCost(18);
     simStore.getState().setDiverged(false);
+    resetSimRunnerHandle([{ iteration: 0, theta: [3, 3], cost: 18 }]);
 
     const refs = createHeroRefs();
     // A left-over settled ember: visible, full scale, lit.
@@ -59,6 +62,7 @@ describe('HeroBeat (R3F structure smoke)', () => {
     // advance — the run-change branch must reset the ember.
     await renderer.advanceFrames(2, 1 / 60);
     useUIStore.getState().setStartPoint([-3, -3]); // new run identity
+    resetSimRunnerHandle([{ iteration: 0, theta: [-3, -3], cost: 18 }]);
     await renderer.advanceFrames(2, 1 / 60);
 
     expect(ember.visible).toBe(false);

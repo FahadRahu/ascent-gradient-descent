@@ -5,7 +5,7 @@ import { useUIStore } from '../state/uiStore';
 
 // ── Accommodation ─────────────────────────────────────────────────────────────
 // Lights no longer mounts drei <SoftShadows> (removed at M1b — incompatible with
-// three 0.184's sampler2DShadow shadow shader; see Lights.tsx). The remaining
+// Three's sampler2DShadow shadow shader; see Lights.tsx). The remaining
 // drei helper, <ContactShadows> (medium tier), builds a WebGLRenderTarget in a
 // useMemo that misbehaves under test-renderer's MOCK GL, so we mock it to a no-op.
 // Only ContactShadows is mocked — the light primitives stay real, so the asserted

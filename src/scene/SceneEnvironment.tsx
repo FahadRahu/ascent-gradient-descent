@@ -17,7 +17,7 @@ export interface SceneEnvironmentProps {
  * fill ONLY; the locked void `#0B0E1A` + fog (set on <Scene>) stay the backdrop.
  * Setting background={true} would overwrite scene.background and hide the void.
  *
- * PMREM is AUTOMATIC in three r184: the renderer prefilters whatever texture is
+ * PMREM is automatic in Three r182: the renderer prefilters whatever texture is
  * assigned to scene.environment when a MeshStandardMaterial-derived material
  * reads it — so no manual PMREMGenerator here. `environmentIntensity={0.6}`
  * writes scene.environmentIntensity (the single global fill knob).

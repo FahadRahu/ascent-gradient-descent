@@ -5,7 +5,7 @@ import ReactThreeTestRenderer from '@react-three/test-renderer';
 
 // ── Accommodation (see Task 9 brief) ──────────────────────────────────────────
 // The plan's test comment assumed drei's procedural <Environment frames={1}> bake
-// is "a no-op under test-renderer". In this stack (drei 10.7 / three 0.184 /
+// is "a no-op under test-renderer". In this stack (drei 10.7 / Three 0.182 /
 // @react-three/test-renderer 9.1) it is NOT a no-op: on mount drei runs a real
 // CubeCamera.update() -> WebGLRenderer.setRenderTarget() -> drawBuffers(), which
 // throws `TypeError: Invalid value used as weak map key` against test-renderer's

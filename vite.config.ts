@@ -3,8 +3,32 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
+const releaseRevision =
+  process.env.VITE_RELEASE_SHA ?? process.env.COMMIT_REF ?? 'development';
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'release-revision',
+      transformIndexHtml: {
+        order: 'pre',
+        handler: () => [
+          {
+            tag: 'meta',
+            attrs: {
+              name: 'release-revision',
+              content: releaseRevision,
+            },
+            injectTo: 'head',
+          },
+        ],
+      },
+    },
+  ],
+  define: {
+    'import.meta.env.VITE_RELEASE_SHA': JSON.stringify(releaseRevision),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -17,6 +41,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    manifest: true,
   },
   test: {
     globals: true,
@@ -29,8 +54,15 @@ export default defineConfig({
     passWithNoTests: true,
     coverage: {
       provider: 'v8',
-      include: ['src/engine/**', 'src/state/**', 'src/quality/**'],
-      reporter: ['text', 'html'],
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx', 'src/vite-env.d.ts'],
+      reporter: ['text', 'html', 'json-summary'],
+      thresholds: {
+        statements: 60,
+        branches: 40,
+        functions: 65,
+        lines: 60,
+      },
     },
   },
 });

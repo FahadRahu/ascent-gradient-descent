@@ -1,7 +1,10 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+import { installErrorMonitoring } from './monitoring';
 import './styles/globals.css';
+
+installErrorMonitoring(import.meta.env.VITE_RELEASE_SHA);
 
 // Dev-only: expose the two-channel stores for debugging + live verification in
 // the browser console / automated smoke checks. Tree-shaken out of production

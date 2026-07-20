@@ -3,7 +3,16 @@ import { createRef } from 'react';
 import * as THREE from 'three';
 import ReactThreeTestRenderer from '@react-three/test-renderer';
 import { simStore } from '../state/simStore';
-import DescentBall from './DescentBall';
+import DescentBall, { shouldShowCurrentLabel } from './DescentBall';
+
+describe('current-point label priority', () => {
+  const domain = [-5, 5, -5, 5] as const;
+
+  it('shows the label during descent and suppresses it near the goal', () => {
+    expect(shouldShowCurrentLabel([3, 3], [0, 0], domain)).toBe(true);
+    expect(shouldShowCurrentLabel([0.2, 0.2], [0, 0], domain)).toBe(false);
+  });
+});
 
 describe('DescentBall (R3F smoke test)', () => {
   it('renders a mesh carrying a physical material', async () => {

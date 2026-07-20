@@ -11,6 +11,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:performance": "node scripts/run-performance-test.mjs",
+    "test:ops": "node --test scripts/verify-deployment.test.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs",
+    "verify:production": "node scripts/verify-deployment.mjs",
     "coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit"
   },
@@ -18,7 +24,6 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
-    "three-custom-shader-material": "^6.4.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.460.0",
     "maath": "0.10.8",
@@ -27,15 +32,18 @@
     "react-dom": "^19.2.0",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "three": "~0.184.0",
+    "three": "~0.182.0",
+    "three-custom-shader-material": "^6.4.0",
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1",
     "@react-three/test-renderer": "^9.1.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
-    "@types/three": "^0.184.0",
+    "@types/three": "~0.182.0",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "^4.1.8",
@@ -44,7 +52,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.15",
     "typescript": "^5.6.3",
-    "vite": "^7.0.0",
+    "vite": "^7.3.6",
     "vitest": "^4.1.8"
   }
 }

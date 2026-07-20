@@ -7,7 +7,7 @@ import { useUIStore } from '../state/uiStore';
 import { getFunction } from '../engine/functions';
 import type { Tier } from '../quality/tiers';
 import { historyToWorldPoints, buildTubeGeometry, revealProgress } from './pathGeometry';
-import { getSimRunnerHandle } from './useSimRunner';
+import { getSimRunnerHandle } from '../state/simHistory';
 import { pathVertexShader, pathFragmentShader } from './shaders/pathShaders';
 import type { HaloUniformRef } from './heroRefs';
 

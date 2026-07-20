@@ -28,6 +28,17 @@
   border-color: var(--color-border);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html,
 body,
 #root {
@@ -92,6 +103,66 @@ a:focus-visible {
 .scene-layer canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+.graphics-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  color: var(--color-muted);
+  transform: translate(-50%, -50%);
+}
+
+.graphics-state-loading {
+  gap: 10px;
+  font-size: 12px;
+}
+
+.graphics-state-loading svg {
+  color: var(--color-cyan);
+  animation: graphics-spin 900ms linear infinite;
+}
+
+.graphics-state-error {
+  width: min(390px, calc(100vw - 40px));
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 8px;
+  background: rgba(7, 11, 21, 0.94);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.graphics-state-error > svg {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  color: var(--color-amber);
+}
+
+.graphics-state-error strong {
+  display: block;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.graphics-state-error p {
+  margin: 5px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.graphics-state-error .secondary-action {
+  flex: 0 0 auto;
+  min-width: 132px;
+}
+
+@keyframes graphics-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .hud-layer {
@@ -303,6 +374,11 @@ a:focus-visible {
 .core-formula sub {
   color: var(--color-muted);
   font-size: 9px;
+}
+
+.core-formula .help-tooltip {
+  align-self: center;
+  margin-left: 2px;
 }
 
 .formula-equals {
@@ -534,6 +610,11 @@ a:focus-visible {
 .run-status[data-state="at-minimum"]::before {
   background: var(--color-amber);
   box-shadow: 0 0 12px rgba(255, 185, 87, 0.68);
+}
+
+.run-status[data-state="loading"],
+.run-status[data-state="unavailable"] {
+  color: var(--color-muted);
 }
 
 .step-result {
@@ -963,6 +1044,16 @@ a:focus-visible {
   height: 92px;
 }
 
+.chart-summary {
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: var(--color-muted);
+  font-size: 10px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .transport {
   position: absolute;
   bottom: 24px;
@@ -1038,6 +1129,15 @@ a:focus-visible {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.primary-action:disabled,
+.secondary-action:disabled,
+.icon-button:disabled {
+  color: var(--color-dim);
+  background: rgba(255, 255, 255, 0.045);
+  opacity: 0.58;
+  transform: none;
+}
+
 .scene-label {
   display: inline-flex;
   align-items: center;
@@ -1055,6 +1155,10 @@ a:focus-visible {
   line-height: 1;
   white-space: nowrap;
   backdrop-filter: blur(8px);
+}
+
+.scene-label[hidden] {
+  display: none;
 }
 
 .scene-label-current {
@@ -1086,13 +1190,23 @@ a:focus-visible {
 
 @media (max-width: 820px) {
   .app-shell {
-    min-height: 600px;
+    min-height: 0;
+  }
+
+  .hud-layer {
+    display: grid;
+    grid-template-rows: 38px auto minmax(72px, 1fr) auto 56px;
+    gap: 8px;
+    padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
   }
 
   .brand-bar {
-    top: 14px;
-    left: 16px;
-    right: 16px;
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    grid-row: 1;
+    height: 38px;
   }
 
   .brand-context {
@@ -1100,9 +1214,12 @@ a:focus-visible {
   }
 
   .concept-panel {
-    top: 66px;
-    left: 16px;
-    width: calc(100vw - 32px);
+    position: relative;
+    top: auto;
+    left: auto;
+    grid-row: 2;
+    width: auto;
+    min-width: 0;
   }
 
   .concept-panel h1 {
@@ -1150,15 +1267,18 @@ a:focus-visible {
   }
 
   .control-panel {
+    position: relative;
     top: auto;
-    right: 10px;
-    bottom: 72px;
-    left: 10px;
+    right: auto;
+    bottom: auto;
+    left: auto;
     display: grid;
+    grid-row: 4;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0 12px;
     width: auto;
-    max-height: min(47dvh, 330px);
+    min-height: 0;
+    max-height: none;
     padding: 14px;
   }
 
@@ -1194,17 +1314,27 @@ a:focus-visible {
   }
 
   .transport {
-    bottom: 10px;
+    position: relative;
+    bottom: auto;
+    left: auto;
+    grid-row: 5;
+    align-self: end;
+    justify-self: center;
+    transform: none;
+  }
+
+  .scene-label-current {
+    display: none;
   }
 }
 
 @media (max-width: 460px) {
   .brand-bar {
-    top: 10px;
+    top: auto;
   }
 
   .concept-panel {
-    top: 55px;
+    top: auto;
   }
 
   .concept-panel h1 {
@@ -1251,6 +1381,61 @@ a:focus-visible {
     padding: 4px 6px;
     font-size: 8px;
   }
+
+  .scene-label-goal {
+    display: none;
+  }
+}
+
+@media (max-width: 820px) and (max-height: 760px) and (orientation: portrait) {
+  .hud-layer {
+    grid-template-rows: 34px auto minmax(64px, 1fr) auto 56px;
+    gap: 6px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .brand-bar {
+    height: 34px;
+  }
+
+  .concept-panel h1 {
+    margin: 4px 0 6px;
+  }
+
+  .cost-definition,
+  .learning-loop,
+  .control-heading,
+  .loss-chart {
+    display: none;
+  }
+
+  .live-signal {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+
+  .step-result {
+    padding: 7px 9px;
+  }
+
+  .control-panel {
+    gap: 0 8px;
+    padding: 9px 10px;
+  }
+
+  .control-group {
+    padding: 5px 0 7px;
+  }
+
+  .control-group label,
+  .control-label-row {
+    margin-bottom: 5px;
+  }
+
+  .learning-rate-control {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-height: 780px) and (min-width: 821px) {
@@ -1279,6 +1464,117 @@ a:focus-visible {
 
   .loss-chart canvas {
     height: 66px;
+  }
+}
+
+@media (max-height: 980px) and (min-width: 821px) {
+  .scene-legend {
+    display: none;
+  }
+
+  .concept-panel {
+    top: 82px;
+  }
+}
+
+@media (max-width: 820px) and (max-height: 500px) and (orientation: landscape) {
+  .hud-layer {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: 34px minmax(0, 1fr) 56px;
+    gap: 6px 16px;
+    padding: max(6px, env(safe-area-inset-top)) 10px max(6px, env(safe-area-inset-bottom));
+  }
+
+  .brand-bar {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
+    grid-row: 1;
+    grid-column: 1 / -1;
+    height: 34px;
+  }
+
+  .concept-panel {
+    position: relative;
+    top: auto;
+    left: auto;
+    grid-row: 2;
+    grid-column: 1;
+    width: auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .concept-panel h1 {
+    margin: 5px 0 8px;
+    font-size: 21px;
+  }
+
+  .cost-definition {
+    max-width: none;
+  }
+
+  .cost-definition p {
+    font-size: 11px;
+  }
+
+  .height-cost-cue,
+  .core-formula,
+  .learning-loop,
+  .scene-legend,
+  .live-signal {
+    display: none;
+  }
+
+  .control-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    grid-row: 2;
+    grid-column: 2;
+    width: auto;
+    max-height: none;
+    padding: 10px;
+    overflow-y: auto;
+  }
+
+  .control-heading,
+  .control-note,
+  .optimizer-rule,
+  .loss-chart {
+    display: none;
+  }
+
+  .control-group {
+    padding: 5px 0 8px;
+  }
+
+  .learning-rate-control {
+    grid-column: 1 / -1;
+  }
+
+  .transport {
+    position: relative;
+    bottom: auto;
+    left: auto;
+    grid-row: 3;
+    grid-column: 1 / -1;
+    align-self: end;
+    justify-self: center;
+    transform: none;
+  }
+
+  .graphics-state-error {
+    top: 52%;
+    width: min(340px, calc(100vw - 40px));
+  }
+
+  .scene-label {
+    display: none;
   }
 }
 

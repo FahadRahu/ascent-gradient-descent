@@ -14,22 +14,14 @@ import { TIER_SETTINGS } from '../quality/tiers';
  * - shadow-bias / shadow-normalBias kill the displaced-surface acne.
  *
  * Soft-shadow STRATEGY is tier-conditional:
- *   ultra/high → the directional key's real cast shadow via the <Canvas shadows>
- *                PCFSoftShadowMap default (soft-edged percentage-closer filtering).
+ *   ultra/high → the directional key's real cast shadow via the supported
+ *                PCFShadowMap path selected by <Canvas shadows="basic">.
  *   medium     → drei <ContactShadows frames={1}>  (cheap, baked once).
  *   low/fallback → none if shadowMapSize is 0.
  *
- * ⚠️ drei <SoftShadows> (PCSS) was REMOVED at M1b: it string-patches
- * THREE.ShaderChunk.shadowmap_pars_fragment assuming the legacy RGBA-packed-depth
- * path (`unpackRGBAToDepth(texture2D(shadowMap,…))`), but three 0.184 modernized
- * shadows to `sampler2DShadow` + hardware depth-compare. The patch injects a bare
- * `return` at the uniform-declaration scope (→ `'return': syntax error`) and calls
- * `unpackRGBAToDepth` on a `sampler2DShadow` (→ no-matching-overload), producing an
- * uncompilable fragment shader that BLANKS the whole scene. drei 10.7.7 is the
- * latest 10.x and still ships this; the only fix would downgrade three below the
- * locked `~0.184` pin (which the postprocessing `<0.185` cap + CSM depend on).
- * So PCFSoftShadowMap is the soft-shadow path on this stack. (Pre-existing M1a
- * issue surfaced at the M1b live checkpoint; reproduced on main/v0.2.0-m1a.)
+ * drei <SoftShadows> is intentionally not used because it patches Three shader
+ * internals. The built-in PCF path stays warning-free on the version range
+ * shared by Fiber, postprocessing, and the custom surface material.
  */
 export default function Lights() {
   const tier = useUIStore((s) => s.tier);

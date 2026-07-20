@@ -14,6 +14,8 @@ describe('UI store (Channel A — slow/reactive)', () => {
     expect(s.startPoint).toEqual([3.5, -2.5]);
     expect(s.isPlaying).toBe(false);
     expect(s.tier).toBe('high');
+    expect(s.qualityCeiling).toBe('ultra');
+    expect(s.runOutcome).toBe('active');
   });
 
   it('updates function and optimizer selection', () => {
@@ -41,6 +43,19 @@ describe('UI store (Channel A — slow/reactive)', () => {
 
     expect(useUIStore.getState().isPlaying).toBe(false);
     expect(useUIStore.getState().stepRequest).toBe(before + 1);
+  });
+
+  it('locks playback and stepping after a terminal outcome', () => {
+    const before = useUIStore.getState().stepRequest;
+    useUIStore.getState().setRunOutcome('converged');
+    useUIStore.getState().setPlaying(true);
+    useUIStore.getState().stepOnce();
+
+    expect(useUIStore.getState().isPlaying).toBe(false);
+    expect(useUIStore.getState().stepRequest).toBe(before);
+
+    useUIStore.getState().restart();
+    expect(useUIStore.getState().runOutcome).toBe('active');
   });
 
   it('requests a camera reset without changing the optimization setup', () => {
