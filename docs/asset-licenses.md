@@ -2,7 +2,7 @@
 
 ## Satara Night, No Lamps
 
-- File: `public/hdri/satara_night_no_lamps_1k.hdr`
+- File: `public/hdri/satara_night_no_lamps_1k.2184494e.hdr`
 - Source: <https://polyhaven.com/a/satara_night_no_lamps>
 - Provider: Poly Haven
 - License: CC0 1.0 Universal

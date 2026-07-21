@@ -46,7 +46,10 @@ describe('SceneEnvironment (R3F smoke test)', () => {
     // No real .hdr fetch happens under test-renderer (Suspense fallback={null});
     // we only assert the component tree is constructable with mode="hdr".
     const renderer = await ReactThreeTestRenderer.create(
-      <SceneEnvironment mode="hdr" hdr="/hdri/satara_night_no_lamps_1k.hdr" />,
+      <SceneEnvironment
+        mode="hdr"
+        hdr="/hdri/satara_night_no_lamps_1k.2184494e.hdr"
+      />,
     );
     expect(renderer.scene).toBeTruthy();
     await renderer.unmount();

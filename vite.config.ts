@@ -1,10 +1,42 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 import path from 'path';
 
 const releaseRevision =
-  process.env.VITE_RELEASE_SHA ?? process.env.COMMIT_REF ?? 'development';
+  process.env.VITE_RELEASE_SHA ??
+  process.env.VERCEL_GIT_COMMIT_SHA ??
+  'development';
+const deployEnvironment =
+  process.env.VITE_DEPLOY_ENV ?? process.env.VERCEL_ENV ?? 'local';
+const sentrySourceMapUploadEnabled =
+  releaseRevision !== 'development' &&
+  Boolean(
+    process.env.SENTRY_AUTH_TOKEN &&
+      process.env.SENTRY_ORG &&
+      process.env.SENTRY_PROJECT,
+  );
+const sentryBuildPlugin = sentrySourceMapUploadEnabled
+  ? sentryVitePlugin({
+      authToken: process.env.SENTRY_AUTH_TOKEN,
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT,
+      telemetry: false,
+      sourcemaps: {
+        assets: './dist/assets/**',
+        filesToDeleteAfterUpload: './dist/**/*.map',
+      },
+      release: {
+        name: releaseRevision,
+        setCommits: false,
+      },
+      bundleSizeOptimizations: {
+        excludeDebugStatements: true,
+        excludeTracing: true,
+      },
+    })
+  : undefined;
 
 export default defineConfig({
   plugins: [
@@ -25,9 +57,11 @@ export default defineConfig({
         ],
       },
     },
+    ...(sentryBuildPlugin ? [sentryBuildPlugin] : []),
   ],
   define: {
     'import.meta.env.VITE_RELEASE_SHA': JSON.stringify(releaseRevision),
+    'import.meta.env.VITE_DEPLOY_ENV': JSON.stringify(deployEnvironment),
   },
   resolve: {
     alias: {
@@ -40,7 +74,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false,
+    sourcemap: sentrySourceMapUploadEnabled ? 'hidden' : false,
     manifest: true,
   },
   test: {

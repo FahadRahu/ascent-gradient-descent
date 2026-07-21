@@ -1,9 +1,19 @@
 node_modules
 dist
 *.local
+.env
+.env.*
+!.env.example
+.vercel/
 .DS_Store
+.claude/
 .superpowers/
 *.tsbuildinfo
+
+# Local product planning and audit material
+PRD.md
+docs/production-readiness-audit-*.md
+docs/superpowers/
 
 # tsc -b emits these config twins at the repo root; build output, not source
 vite.config.js

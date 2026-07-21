@@ -4,7 +4,12 @@ import App from './App';
 import { installErrorMonitoring } from './monitoring';
 import './styles/globals.css';
 
-installErrorMonitoring(import.meta.env.VITE_RELEASE_SHA);
+const sentryRootOptions = installErrorMonitoring({
+  enabled: import.meta.env.PROD,
+  dsn: import.meta.env.VITE_SENTRY_DSN,
+  release: import.meta.env.VITE_RELEASE_SHA,
+  environment: import.meta.env.VITE_DEPLOY_ENV,
+});
 
 // Dev-only: expose the two-channel stores for debugging + live verification in
 // the browser console / automated smoke checks. Tree-shaken out of production
@@ -20,7 +25,7 @@ if (import.meta.env.DEV) {
   );
 }
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+ReactDOM.createRoot(document.getElementById('root')!, sentryRootOptions).render(
   <React.StrictMode>
     <App />
   </React.StrictMode>,

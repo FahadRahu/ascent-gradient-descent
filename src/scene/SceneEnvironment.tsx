@@ -24,7 +24,7 @@ export interface SceneEnvironmentProps {
  */
 export default function SceneEnvironment({
   mode,
-  hdr = '/hdri/satara_night_no_lamps_1k.hdr',
+  hdr = '/hdri/satara_night_no_lamps_1k.2184494e.hdr',
 }: SceneEnvironmentProps) {
   if (mode === 'hdr') {
     // RGBELoader fetches the .hdr → suspend until it resolves. fallback={null}

@@ -4,6 +4,10 @@
   "version": "1.0.2-beta.1",
   "type": "module",
   "description": "ASCENT — interactive 3D gradient-descent simulation (teaching tool + showpiece)",
+  "engines": {
+    "node": "22.x"
+  },
+  "packageManager": "npm@11.7.0",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,7 +18,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:performance": "node scripts/run-performance-test.mjs",
-    "test:ops": "node --test scripts/verify-deployment.test.mjs",
+    "test:ops": "node --test scripts/vercel-config.test.mjs scripts/verify-deployment.test.mjs",
     "check:bundle": "node scripts/check-bundle.mjs",
     "verify:production": "node scripts/verify-deployment.mjs",
     "coverage": "vitest run --coverage",
@@ -24,6 +28,7 @@
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
     "@react-three/postprocessing": "^3.0.4",
+    "@sentry/react": "^10.67.0",
     "clsx": "^2.1.1",
     "lucide-react": "^0.460.0",
     "maath": "0.10.8",
@@ -40,6 +45,7 @@
     "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.61.1",
     "@react-three/test-renderer": "^9.1.0",
+    "@sentry/vite-plugin": "^5.4.0",
     "@types/node": "^22.10.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

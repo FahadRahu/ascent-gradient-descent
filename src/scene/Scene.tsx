@@ -122,7 +122,7 @@ export function SceneContents() {
           boundary (mode="procedural") for the M1b post-stack revisit. */}
       <SceneEnvironment
         mode={tier === 'low' || tier === 'medium' ? 'procedural' : 'hdr'}
-        hdr="/hdri/satara_night_no_lamps_1k.hdr"
+        hdr="/hdri/satara_night_no_lamps_1k.2184494e.hdr"
       />
 
       <Surface />
