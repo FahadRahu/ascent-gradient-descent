@@ -43,6 +43,8 @@ test('pins the Vercel build contract', async () => {
   ]);
   assert.equal(vercel.redirects, undefined);
   assert.match(packageJson.dependencies['@sentry/react'], /^\^10\./);
+  assert.match(packageJson.dependencies['@vercel/analytics'], /^\^2\./);
+  assert.match(packageJson.dependencies['@vercel/speed-insights'], /^\^2\./);
   assert.match(packageJson.devDependencies['@sentry/vite-plugin'], /^\^5\./);
 });
 

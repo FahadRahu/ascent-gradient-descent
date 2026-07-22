@@ -114,8 +114,11 @@ test('opens the privacy policy directly and returns to the lab', async ({
   await expect(
     page.getByRole('heading', { level: 1, name: 'Privacy policy' }),
   ).toBeVisible();
-  await expect(page.getByText('No cookies, local storage, or session storage.'))
+  await expect(page.getByText(/ASCENT sets no cookies/))
     .toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Analytics and performance data' }),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Information processed' }))
     .toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth))

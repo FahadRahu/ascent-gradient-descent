@@ -4,6 +4,13 @@ import App from './App';
 import { installErrorMonitoring } from './monitoring';
 import './styles/globals.css';
 
+const LazyVercelTelemetry = React.lazy(async () => {
+  const module = await import('./VercelTelemetry');
+  return { default: module.VercelTelemetry };
+});
+const vercelTelemetryEnabled =
+  import.meta.env.VITE_DEPLOY_ENV === 'production';
+
 const sentryRootOptions = installErrorMonitoring({
   enabled: import.meta.env.PROD,
   dsn: import.meta.env.VITE_SENTRY_DSN,
@@ -28,5 +35,10 @@ if (import.meta.env.DEV) {
 ReactDOM.createRoot(document.getElementById('root')!, sentryRootOptions).render(
   <React.StrictMode>
     <App />
+    {vercelTelemetryEnabled ? (
+      <React.Suspense fallback={null}>
+        <LazyVercelTelemetry />
+      </React.Suspense>
+    ) : null}
   </React.StrictMode>,
 );

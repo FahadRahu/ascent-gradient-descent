@@ -38,16 +38,25 @@ export function PrivacyPolicy() {
           <p className="privacy-lead">
             ASCENT is an interactive gradient descent visualization. It does
             not require an account, use advertising trackers, or collect
-            information you type into a form. This policy explains the limited
-            technical data processed when you use the site.
+            information you type into a form. It uses privacy-focused,
+            aggregate measurements to understand traffic and performance. This
+            policy explains the limited technical data processed when you use
+            the site.
           </p>
         </header>
 
         <aside className="privacy-summary" aria-labelledby="privacy-summary-title">
           <h2 id="privacy-summary-title">At a glance</h2>
           <ul>
-            <li>No accounts, purchases, advertising, or behavioral analytics.</li>
-            <li>No cookies, local storage, or session storage.</li>
+            <li>No accounts, purchases, advertising, or cross-site tracking.</li>
+            <li>
+              ASCENT sets no cookies and uses no local storage or session
+              storage.
+            </li>
+            <li>
+              Vercel records anonymous, aggregate page views and Web Vitals
+              without tying them to a person or IP address.
+            </li>
             <li>
               Production errors may be sent to Sentry so problems can be
               diagnosed and fixed.
@@ -108,6 +117,32 @@ export function PrivacyPolicy() {
           </p>
         </section>
 
+        <section className="privacy-section" aria-labelledby="analytics-title">
+          <h2 id="analytics-title">Analytics and performance data</h2>
+          <p>
+            ASCENT uses Vercel Web Analytics to understand aggregate website
+            traffic. A page-view record may include the event time, page URL,
+            referrer, approximate location, device type, operating system,
+            browser, and analytics script version. Query strings and URL
+            fragments are removed by ASCENT before an event is sent.
+          </p>
+          <p>
+            Vercel Web Analytics does not associate page views with an
+            individual or IP address. It identifies a visitor session using a
+            hash derived from the incoming request, and Vercel states that the
+            session identifier is discarded after 24 hours. ASCENT does not
+            send custom analytics events.
+          </p>
+          <p>
+            ASCENT also uses Vercel Speed Insights to measure real-world
+            performance. A measurement may include the route and URL, network
+            speed category, browser, device type, operating system, country,
+            Web Vital value and attribution, SDK version, and event time.
+            Vercel states that these records are anonymous and cannot be used
+            to reconstruct a browsing session or identify a visitor.
+          </p>
+        </section>
+
         <section className="privacy-section" aria-labelledby="hosting-title">
           <h2 id="hosting-title">Hosting data</h2>
           <p>
@@ -122,10 +157,10 @@ export function PrivacyPolicy() {
           <h2 id="purpose-title">Why this information is used</h2>
           <p>
             Technical information is used only to deliver ASCENT, protect the
-            service, investigate failures, and improve reliability. Where
-            applicable law requires a legal basis, this processing relies on
-            the legitimate interest in operating a secure and dependable
-            website.
+            service, investigate failures, understand aggregate traffic, and
+            improve performance and reliability. Where applicable law requires
+            a legal basis, this processing relies on the legitimate interest in
+            operating and improving a secure and dependable website.
           </p>
           <p>
             ASCENT does not sell personal information or share it for
@@ -158,7 +193,8 @@ export function PrivacyPolicy() {
               >
                 Vercel
               </a>{' '}
-              for hosting, content delivery, and infrastructure security.
+              for hosting, content delivery, infrastructure security,
+              anonymous Web Analytics, and anonymous Speed Insights.
             </li>
           </ul>
           <p>
@@ -173,11 +209,13 @@ export function PrivacyPolicy() {
           <h2 id="retention-title">Retention and security</h2>
           <p>
             ASCENT does not maintain an application database of visitor
-            information. Sentry diagnostic events and Vercel infrastructure
-            records are retained according to the project settings and the
-            providers' operational retention periods. Data may be deleted
-            sooner when it is no longer needed for the purposes described
-            above.
+            information. Sentry diagnostic events, Vercel infrastructure
+            records, and aggregate analytics and performance records are
+            retained according to the project settings and the providers'
+            operational retention periods. Vercel states that its Web
+            Analytics visitor-session identifier is discarded after 24 hours.
+            Data may be deleted sooner when it is no longer needed for the
+            purposes described above.
           </p>
           <p>
             ASCENT uses HTTPS, a restrictive content security policy, limited
