@@ -94,12 +94,47 @@ async function expectLabelInsideViewport(page: Page, selector: string) {
 test('loads the lesson and advances one optimizer iteration', async ({ page }) => {
   const errors = capturePageErrors(page);
   await openReadyApp(page);
+  await expect(page.getByRole('link', { name: 'Privacy' })).toBeVisible();
 
   const iteration = page.locator('.metrics-grid output').nth(3);
   await expect(iteration).toHaveText('0');
   await page.getByRole('button', { name: 'Advance one iteration' }).click();
   await expect(iteration).toHaveText('1');
   expect(errors).toEqual([]);
+});
+
+test('opens the privacy policy directly and returns to the lab', async ({
+  page,
+  browserName,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await page.goto('/privacy');
+
+  await expect(page).toHaveTitle('Privacy Policy | ASCENT');
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Privacy policy' }),
+  ).toBeVisible();
+  await expect(page.getByText('No cookies, local storage, or session storage.'))
+    .toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Information processed' }))
+    .toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(375);
+
+  if (browserName === 'chromium') {
+    const results = await new AxeBuilder({ page }).analyze();
+    const blocking = results.violations.filter(
+      (violation) =>
+        violation.impact === 'serious' || violation.impact === 'critical',
+    );
+    expect(blocking).toEqual([]);
+  }
+
+  await page.getByRole('link', { name: 'Back to lab' }).click();
+  await expect(page).toHaveURL('/');
+  await expect(
+    page.getByRole('heading', { name: 'Find the lowest point.' }),
+  ).toBeVisible();
 });
 
 test('explains the gradient descent formula', async ({ page }) => {

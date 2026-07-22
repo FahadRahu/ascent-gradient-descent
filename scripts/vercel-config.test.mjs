@@ -35,7 +35,12 @@ test('pins the Vercel build contract', async () => {
   assert.equal(vercel.installCommand, 'npm ci');
   assert.equal(vercel.buildCommand, 'npm run build');
   assert.equal(vercel.outputDirectory, 'dist');
-  assert.equal(vercel.rewrites, undefined);
+  assert.deepEqual(vercel.rewrites, [
+    {
+      source: '/privacy',
+      destination: '/index.html',
+    },
+  ]);
   assert.equal(vercel.redirects, undefined);
   assert.match(packageJson.dependencies['@sentry/react'], /^\^10\./);
   assert.match(packageJson.devDependencies['@sentry/vite-plugin'], /^\^5\./);
@@ -48,6 +53,10 @@ test('defines the complete security and cache policy', async () => {
   assert.deepEqual(headerMap(rules.get('/(.*)')), SECURITY_HEADERS);
   assert.equal(
     headerMap(rules.get('/'))['cache-control'],
+    HTML_CACHE_CONTROL,
+  );
+  assert.equal(
+    headerMap(rules.get('/privacy'))['cache-control'],
     HTML_CACHE_CONTROL,
   );
   assert.equal(

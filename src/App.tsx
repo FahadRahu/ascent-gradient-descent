@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { Hud } from './ui/Hud';
 import { GraphicsState, type GraphicsStatus } from './ui/GraphicsState';
+import { PrivacyPolicy } from './ui/PrivacyPolicy';
 import { supportsWebGL } from './quality/webgl';
 
 const LazyScene = lazy(async () => {
@@ -43,7 +44,7 @@ class SceneErrorBoundary extends Component<
   }
 }
 
-function App() {
+function SimulationApp() {
   const [graphicsStatus, setGraphicsStatus] = useState<GraphicsStatus>(() =>
     supportsWebGL() ? 'loading' : 'unavailable',
   );
@@ -84,6 +85,11 @@ function App() {
       <Hud graphicsStatus={graphicsStatus} />
     </main>
   );
+}
+
+function App() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  return path === '/privacy' ? <PrivacyPolicy /> : <SimulationApp />;
 }
 
 export default App;

@@ -10,6 +10,7 @@ import {
   Pause,
   Play,
   RotateCcw,
+  ShieldCheck,
   StepForward,
 } from 'lucide-react';
 import { FUNCTIONS, getFunction } from '../engine/functions/registry';
@@ -387,6 +388,12 @@ export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
           <span>ASCENT</span>
         </a>
         <span className="brand-context">Gradient descent lab</span>
+        <nav className="brand-links" aria-label="Site">
+          <a className="privacy-nav-link" href="/privacy">
+            <ShieldCheck size={15} aria-hidden="true" />
+            <span>Privacy</span>
+          </a>
+        </nav>
       </header>
 
       <section className="concept-panel" aria-labelledby="concept-title">
