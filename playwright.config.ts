@@ -9,7 +9,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 2 : 1,
+  // Hosted runners software-render WebGL. Concurrent scenes can starve browser
+  // effects and turn healthy interactions into timeouts.
+  workers: 1,
   reporter: 'line',
   use: {
     baseURL: 'http://127.0.0.1:4173',
