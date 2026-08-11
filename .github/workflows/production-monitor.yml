@@ -1,8 +1,14 @@
 name: Production monitor
 
 on:
+  # Weekly drift check: catches production regressions that happen without a
+  # deploy (Vercel config change, header regression, cert/DNS/outage).
   schedule:
-    - cron: '*/15 * * * *'
+    - cron: '0 12 * * 1' # Mondays 12:00 UTC
+  # Release check: runs when Vercel reports a deployment status, so the
+  # verification hits the new version at the moment it goes live. Non-success
+  # and Preview deployments are filtered out in the job's `if` below.
+  deployment_status:
   workflow_dispatch:
 
 permissions:
@@ -10,9 +16,20 @@ permissions:
 
 jobs:
   verify-production:
+    # Only run for successful Production deployments (skips Preview deploys and
+    # in-progress/failed statuses). Scheduled and manual runs carry no
+    # deployment_status payload, so they always pass this guard.
+    if: >-
+      github.event_name != 'deployment_status' ||
+      (github.event.deployment_status.state == 'success' &&
+       github.event.deployment_status.environment == 'Production')
     runs-on: ubuntu-latest
     env:
       PRODUCTION_URL: ${{ vars.PRODUCTION_URL }}
+      # On a post-deploy run, assert the exact commit Vercel deployed is the one
+      # live. Empty on scheduled/manual runs, where verify-deployment.mjs treats
+      # the revision check as "any real deployed commit".
+      EXPECTED_RELEASE_SHA: ${{ github.event.deployment.sha }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
