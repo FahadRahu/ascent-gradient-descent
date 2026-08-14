@@ -227,6 +227,14 @@ a:focus-visible {
   pointer-events: none;
 }
 
+.mobile-control-region {
+  display: contents;
+}
+
+.responsive-tabs {
+  display: none;
+}
+
 .brand-bar,
 .concept-panel,
 .control-panel,
@@ -1469,102 +1477,144 @@ a:focus-visible {
   }
 
   .app-shell {
+    display: grid;
+    grid-template-rows: minmax(0, 58%) minmax(0, 42%);
     min-height: 0;
+  }
+
+  .scene-layer {
+    position: relative;
+    inset: auto;
+    grid-row: 1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .scene-layer canvas {
+    touch-action: none;
   }
 
   .hud-layer {
     display: grid;
-    grid-template-rows: 38px auto minmax(72px, 1fr) auto 56px;
-    gap: 8px;
-    padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom));
+    grid-template-rows: minmax(0, 58%) minmax(0, 42%);
   }
 
   .brand-bar {
-    position: relative;
-    top: auto;
-    right: auto;
-    left: auto;
-    grid-row: 1;
-    height: 38px;
+    position: absolute;
+    top: max(8px, env(safe-area-inset-top));
+    right: 12px;
+    left: 12px;
+    height: 44px;
   }
 
   .brand-context {
     display: none;
   }
 
-  .concept-panel {
+  .mobile-control-region {
+    z-index: 3;
+    display: grid;
+    grid-row: 2;
+    grid-template-rows: 44px minmax(0, 1fr) auto;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+    border-top: 1px solid var(--color-border-strong);
+    background: var(--color-panel-solid);
+    box-shadow: 0 -18px 44px rgba(0, 0, 0, 0.3);
+    pointer-events: auto;
+    overscroll-behavior: contain;
+  }
+
+  .responsive-tabs {
+    display: flex;
+    grid-row: 1;
+    min-width: 0;
+    padding: 0 6px;
+    border-bottom: 1px solid var(--color-border);
+    background: rgba(8, 12, 24, 0.96);
+  }
+
+  .responsive-tabs button {
+    white-space: nowrap;
+  }
+
+  .concept-panel,
+  .control-panel {
     position: relative;
-    top: auto;
-    left: auto;
+    inset: auto;
     grid-row: 2;
     width: auto;
+    height: 100%;
     min-width: 0;
+    min-height: 0;
+    max-height: none;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    text-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .concept-panel[data-mobile-active="false"],
+  .control-panel[data-mobile-active="false"] {
+    display: none;
+  }
+
+  .learn-panel,
+  .signal-panel,
+  .setup-panel,
+  .playback-panel {
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    padding: 14px 16px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border-strong) transparent;
+    overscroll-behavior: contain;
   }
 
   .concept-panel h1 {
-    margin: 7px 0 5px;
-    font-size: 25px;
-  }
-
-  .height-cost-cue,
-  .concept-steps,
-  .scene-legend {
-    display: none;
-  }
-
-  .core-formula {
-    display: none;
+    max-width: none;
+    margin: 7px 0 7px;
+    font-size: 24px;
   }
 
   .cost-definition {
-    max-width: 350px;
+    max-width: 42rem;
     padding-left: 9px;
   }
 
   .cost-definition p {
-    font-size: 11px;
-    line-height: 1.4;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
-  .learning-loop {
-    margin-top: 12px;
-  }
-
-  .live-signal {
-    margin-top: 12px;
-    padding-top: 10px;
-  }
-
-  .live-signal .section-heading,
-  .live-signal .metrics-grid {
+  .height-cost-cue,
+  .core-formula,
+  .learning-loop,
+  .scene-legend {
     display: none;
   }
 
-  .step-result {
+  .live-signal {
     margin-top: 0;
-    padding: 8px 10px;
+    padding-top: 0;
+    border-top: 0;
   }
 
-  .control-panel {
-    position: relative;
-    top: auto;
-    right: auto;
-    bottom: auto;
-    left: auto;
-    display: grid;
-    grid-row: 4;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 12px;
-    width: auto;
-    min-height: 0;
-    max-height: none;
-    padding: 14px;
+  .step-result {
+    margin-top: 12px;
   }
 
-  .control-heading,
-  .learning-rate-control,
-  .loss-chart {
-    grid-column: 1 / -1;
+  .metrics-grid {
+    gap: 12px 18px;
   }
 
   .control-heading {
@@ -1572,38 +1622,68 @@ a:focus-visible {
   }
 
   .control-group {
-    min-width: 0;
-    padding: 11px 0;
+    padding: 12px 0;
+  }
+
+  .control-group:last-child {
     border-bottom: 0;
   }
 
-  .control-note,
-  .optimizer-rule {
-    display: none;
+  .control-note {
+    font-size: 11px;
   }
 
-  .loss-chart {
-    margin-top: 7px;
-    padding-top: 10px;
-    border-top: 1px solid var(--color-border);
+  .playback-panel .optimizer-rule {
+    padding-top: 0;
   }
 
   .loss-chart canvas {
-    height: 58px;
+    height: 82px;
   }
 
   .transport {
     position: relative;
     bottom: auto;
     left: auto;
-    grid-row: 5;
+    display: flex;
+    grid-row: 3;
     align-self: end;
-    justify-self: center;
+    justify-self: stretch;
+    width: 100%;
+    padding: 6px max(8px, env(safe-area-inset-right))
+      max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 0;
+    background: rgba(7, 11, 21, 0.98);
+    box-shadow: 0 -12px 28px rgba(0, 0, 0, 0.24);
     transform: none;
+    backdrop-filter: none;
+  }
+
+  .primary-action,
+  .secondary-action {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .primary-action {
+    font-size: 11px;
+  }
+
+  .secondary-action {
+    font-size: 10px;
   }
 
   .scene-label-current {
     display: none;
+  }
+
+  .graphics-state-error {
+    width: min(390px, calc(100% - 24px));
   }
 }
 
@@ -1621,51 +1701,31 @@ a:focus-visible {
     gap: 8px;
   }
 
-  .brand-bar {
-    top: auto;
+  .responsive-tabs {
+    padding: 0 2px;
   }
 
-  .concept-panel {
-    top: auto;
+  .responsive-tabs button {
+    gap: 3px;
+    padding-right: 4px;
+    padding-left: 4px;
+  }
+
+  .learn-panel,
+  .signal-panel,
+  .setup-panel,
+  .playback-panel {
+    padding: 12px;
   }
 
   .concept-panel h1 {
     font-size: 22px;
   }
 
-  .control-panel {
-    max-height: min(49dvh, 320px);
-    gap: 0 8px;
-    padding: 11px;
-  }
-
-  .control-group label {
-    font-size: 10px;
-  }
-
-  .select-shell select {
-    padding-left: 9px;
-    font-size: 11px;
-  }
-
   .transport {
-    width: calc(100vw - 20px);
-  }
-
-  .primary-action,
-  .secondary-action {
-    flex: 1 1 0;
-    min-width: 0;
-    padding-right: 9px;
-    padding-left: 9px;
-  }
-
-  .primary-action {
-    font-size: 11px;
-  }
-
-  .secondary-action {
-    font-size: 10px;
+    gap: 5px;
+    padding-right: max(6px, env(safe-area-inset-right));
+    padding-left: max(6px, env(safe-area-inset-left));
   }
 
   .scene-label {
@@ -1679,54 +1739,26 @@ a:focus-visible {
   }
 }
 
-@media (max-width: 820px) and (max-height: 760px) and (orientation: portrait) {
+@media (max-width: 820px) and (max-height: 700px) and (orientation: portrait) {
+  .app-shell,
   .hud-layer {
-    grid-template-rows: 34px auto minmax(64px, 1fr) auto 56px;
-    gap: 6px;
-    padding-top: max(8px, env(safe-area-inset-top));
-    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    grid-template-rows: minmax(0, 52%) minmax(0, 48%);
   }
 
-  .brand-bar {
-    height: 34px;
+  .learn-panel,
+  .signal-panel,
+  .setup-panel,
+  .playback-panel {
+    padding-top: 10px;
+    padding-bottom: 10px;
   }
 
-  .concept-panel h1 {
-    margin: 4px 0 6px;
-  }
-
-  .cost-definition,
-  .learning-loop,
-  .control-heading,
-  .loss-chart {
-    display: none;
-  }
-
-  .live-signal {
-    margin-top: 8px;
-    padding-top: 8px;
-  }
-
-  .step-result {
-    padding: 7px 9px;
-  }
-
-  .control-panel {
-    gap: 0 8px;
-    padding: 9px 10px;
+  .control-heading {
+    padding-bottom: 9px;
   }
 
   .control-group {
-    padding: 5px 0 7px;
-  }
-
-  .control-group label,
-  .control-label-row {
-    margin-bottom: 5px;
-  }
-
-  .learning-rate-control {
-    grid-column: 1 / -1;
+    padding: 9px 0;
   }
 }
 
@@ -1770,99 +1802,57 @@ a:focus-visible {
 }
 
 @media (max-width: 820px) and (max-height: 500px) and (orientation: landscape) {
+  .app-shell,
   .hud-layer {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: 34px minmax(0, 1fr) 56px;
-    gap: 6px 16px;
-    padding: max(6px, env(safe-area-inset-top)) 10px max(6px, env(safe-area-inset-bottom));
+    grid-template-columns: minmax(0, 56%) minmax(0, 44%);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .scene-layer {
+    grid-row: 1;
+    grid-column: 1;
   }
 
   .brand-bar {
-    position: relative;
-    top: auto;
-    right: auto;
-    left: auto;
+    right: calc(44% + 10px);
+    left: 10px;
+  }
+
+  .mobile-control-region {
     grid-row: 1;
-    grid-column: 1 / -1;
-    height: 34px;
-  }
-
-  .concept-panel {
-    position: relative;
-    top: auto;
-    left: auto;
-    grid-row: 2;
-    grid-column: 1;
-    width: auto;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .concept-panel h1 {
-    margin: 5px 0 8px;
-    font-size: 21px;
-  }
-
-  .cost-definition {
-    max-width: none;
-  }
-
-  .cost-definition p {
-    font-size: 11px;
-  }
-
-  .height-cost-cue,
-  .core-formula,
-  .learning-loop,
-  .scene-legend,
-  .live-signal {
-    display: none;
-  }
-
-  .control-panel {
-    position: relative;
-    top: auto;
-    right: auto;
-    bottom: auto;
-    left: auto;
-    grid-row: 2;
     grid-column: 2;
-    width: auto;
-    max-height: none;
-    padding: 10px;
-    overflow-y: auto;
+    border-top: 0;
+    border-left: 1px solid var(--color-border-strong);
+    box-shadow: -18px 0 44px rgba(0, 0, 0, 0.3);
   }
 
-  .control-heading,
-  .control-note,
-  .optimizer-rule,
-  .loss-chart {
-    display: none;
+  .learn-panel,
+  .signal-panel,
+  .setup-panel,
+  .playback-panel {
+    padding: 10px 12px;
+  }
+
+  .control-heading {
+    padding-bottom: 8px;
   }
 
   .control-group {
-    padding: 5px 0 8px;
+    padding: 8px 0;
   }
 
-  .learning-rate-control {
-    grid-column: 1 / -1;
+  .control-note {
+    margin-top: 6px;
   }
 
   .transport {
-    position: relative;
-    bottom: auto;
-    left: auto;
-    grid-row: 3;
-    grid-column: 1 / -1;
-    align-self: end;
-    justify-self: center;
-    transform: none;
+    padding-right: max(6px, env(safe-area-inset-right));
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+    padding-left: 6px;
   }
 
   .graphics-state-error {
-    top: 52%;
-    width: min(340px, calc(100vw - 40px));
+    width: min(340px, calc(56vw - 24px));
   }
 
   .scene-label {
