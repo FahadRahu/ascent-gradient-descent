@@ -30,14 +30,14 @@ function captureActionableWarnings(page: Page): string[] {
 async function openReadyApp(page: Page) {
   await page.goto('/');
   await expect(page).toHaveTitle('Ascent | Gradient Descent, Made Visible');
-  await expect(page.getByRole('heading', { name: 'Find the lowest point.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Ascent home' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Advance one iteration' })).toBeEnabled({
     timeout: 30_000,
   });
   await expect(page.locator('.scene-layer canvas')).toBeVisible({ timeout: 30_000 });
 }
 
-async function expectHudRegionsSeparated(page: Page) {
+async function expectDesktopHudRegionsSeparated(page: Page) {
   const regions = ['.concept-panel', '.control-panel', '.transport'] as const;
   const boxes = await Promise.all(
     regions.map(async (selector) => ({
@@ -71,6 +71,51 @@ async function expectHudRegionsSeparated(page: Page) {
       expect(overlaps, `${a.selector} must not overlap ${b.selector}`).toBe(false);
     }
   }
+}
+
+async function expectResponsiveRegionsSeparated(page: Page) {
+  const selectors = [
+    '.scene-layer',
+    '.mobile-control-region',
+    '.responsive-tabs',
+    '.transport',
+    '.scene-layer canvas',
+  ] as const;
+  const [scene, controls, tabs, transport, canvas] = await Promise.all(
+    selectors.map((selector) => page.locator(selector).boundingBox()),
+  );
+  const viewport = page.viewportSize();
+
+  expect(viewport).not.toBeNull();
+  for (const [index, box] of [scene, controls, tabs, transport, canvas].entries()) {
+    expect(box, `${selectors[index]} should have a rendered box`).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.y).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 0.5);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 0.5);
+  }
+
+  const sceneOverlapsControls = (
+    scene!.x < controls!.x + controls!.width &&
+    scene!.x + scene!.width > controls!.x &&
+    scene!.y < controls!.y + controls!.height &&
+    scene!.y + scene!.height > controls!.y
+  );
+  expect(sceneOverlapsControls, 'scene and mobile controls must not overlap').toBe(false);
+
+  for (const [name, box] of [['tabs', tabs], ['transport', transport]] as const) {
+    expect(box!.x, `${name} should stay inside the control region`).toBeGreaterThanOrEqual(controls!.x);
+    expect(box!.y, `${name} should stay inside the control region`).toBeGreaterThanOrEqual(controls!.y);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(controls!.x + controls!.width + 0.5);
+    expect(box!.y + box!.height).toBeLessThanOrEqual(controls!.y + controls!.height + 0.5);
+  }
+
+  expect(canvas!.x).toBeGreaterThanOrEqual(scene!.x - 0.5);
+  expect(canvas!.y).toBeGreaterThanOrEqual(scene!.y - 0.5);
+  expect(canvas!.x + canvas!.width).toBeLessThanOrEqual(scene!.x + scene!.width + 0.5);
+  expect(canvas!.y + canvas!.height).toBeLessThanOrEqual(scene!.y + scene!.height + 0.5);
+  expect(canvas!.width).toBeGreaterThanOrEqual(scene!.width - 1);
+  expect(canvas!.height).toBeGreaterThanOrEqual(scene!.height - 1);
 }
 
 async function expectNewLossRun(page: Page, previousRunId: number): Promise<number> {
@@ -135,9 +180,7 @@ test('opens the privacy policy directly and returns to the lab', async ({
 
   await page.getByRole('link', { name: 'Back to lab' }).click();
   await expect(page).toHaveURL('/');
-  await expect(
-    page.getByRole('heading', { name: 'Find the lowest point.' }),
-  ).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Ascent home' })).toBeVisible();
 });
 
 test('explains the gradient descent formula', async ({ page }) => {
@@ -161,6 +204,15 @@ test('explains the gradient descent formula', async ({ page }) => {
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 });
 
+test('preserves the floating desktop HUD architecture', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openReadyApp(page);
+
+  await expect(page.getByRole('heading', { name: 'Find the lowest point.' })).toBeVisible();
+  await expect(page.getByRole('tablist')).toHaveCount(0);
+  await expectDesktopHudRegionsSeparated(page);
+});
+
 for (const viewport of [
   { width: 320, height: 568 },
   { width: 375, height: 667 },
@@ -168,28 +220,102 @@ for (const viewport of [
   { width: 768, height: 1024 },
   { width: 812, height: 375 },
 ]) {
-  test(`keeps HUD regions separate at ${viewport.width}x${viewport.height}`, async ({
+  test(`separates scene and tabbed controls at ${viewport.width}x${viewport.height}`, async ({
     page,
   }) => {
     await page.setViewportSize(viewport);
     await openReadyApp(page);
-    await expectHudRegionsSeparated(page);
+
+    const tablist = page.getByRole('tablist', { name: 'Lab controls' });
+    const setupTab = page.getByRole('tab', { name: 'Setup' });
+    const signalTab = page.getByRole('tab', { name: 'Signal' });
+    const playbackTab = page.getByRole('tab', { name: 'Playback' });
+    const learnTab = page.getByRole('tab', { name: 'Learn' });
+    const transport = page.getByRole('group', { name: 'Simulation controls' });
+
+    await expect(tablist).toBeVisible();
+    await expect(setupTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('tabpanel', { name: 'Setup' })).toBeVisible();
+    await expect(transport).toBeVisible();
+    await expectResponsiveRegionsSeparated(page);
     await expect(page.locator('.scene-label-current')).toBeHidden();
     if (viewport.width <= 460 || viewport.height <= 500) {
       await expect(page.locator('.scene-label-goal')).toBeHidden();
     }
 
     await page.getByLabel('Landscape', { exact: true }).selectOption('saddle');
+    const learningRate = page.getByLabel('Learning rate', { exact: true });
+    await learningRate.scrollIntoViewIfNeeded();
+    await expect(learningRate).toBeVisible();
+    const learningRateBox = await learningRate.boundingBox();
+    const transportBox = await transport.boundingBox();
+    expect(learningRateBox).not.toBeNull();
+    expect(transportBox).not.toBeNull();
+    expect(learningRateBox!.y + learningRateBox!.height)
+      .toBeLessThanOrEqual(transportBox!.y);
+
+    await learnTab.click();
     await expect(page.getByRole('heading', { name: 'See why saddles are tricky.' }))
       .toBeVisible();
+    await expect(transport).toBeVisible();
+
     await page.getByRole('button', { name: 'Advance one iteration' }).click();
+    await signalTab.click();
     await expect(page.locator('.metrics-grid output').nth(3)).toHaveText('1');
-    await expectHudRegionsSeparated(page);
+    await expect(page.getByRole('tabpanel', { name: 'Signal' })).toBeVisible();
+
+    await playbackTab.click();
+    await expect(page.getByRole('tabpanel', { name: 'Playback' })).toBeVisible();
+    await expect(page.locator('.loss-chart')).toBeVisible();
+    await expect(transport).toBeVisible();
+    await expectResponsiveRegionsSeparated(page);
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth))
       .toBeLessThanOrEqual(viewport.width);
   });
 }
+
+test('supports keyboard navigation across responsive tabs', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await openReadyApp(page);
+
+  const setupTab = page.getByRole('tab', { name: 'Setup' });
+  const signalTab = page.getByRole('tab', { name: 'Signal' });
+  const learnTab = page.getByRole('tab', { name: 'Learn' });
+
+  await setupTab.focus();
+  await setupTab.press('ArrowRight');
+  await expect(signalTab).toBeFocused();
+  await expect(signalTab).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Signal' })).toBeVisible();
+
+  await signalTab.press('End');
+  await expect(learnTab).toBeFocused();
+  await expect(learnTab).toHaveAttribute('aria-selected', 'true');
+
+  await learnTab.press('Home');
+  await expect(setupTab).toBeFocused();
+  await expect(setupTab).toHaveAttribute('aria-selected', 'true');
+});
+
+test('has no serious mobile accessibility violations across tabs', async ({
+  page,
+  browserName,
+}) => {
+  test.skip(browserName !== 'chromium', 'One mobile axe pass is sufficient.');
+  await page.setViewportSize({ width: 375, height: 667 });
+  await openReadyApp(page);
+
+  for (const tabName of ['Setup', 'Signal', 'Playback', 'Learn']) {
+    await page.getByRole('tab', { name: tabName }).click();
+    const results = await new AxeBuilder({ page }).analyze();
+    const blocking = results.violations.filter(
+      (violation) =>
+        violation.impact === 'serious' || violation.impact === 'critical',
+    );
+    expect(blocking, `${tabName} tab accessibility violations`).toEqual([]);
+  }
+});
 
 test('shows a recoverable state when WebGL is unavailable', async ({ page }) => {
   await page.addInitScript(() => {
