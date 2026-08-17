@@ -1596,11 +1596,31 @@ a:focus-visible {
     line-height: 1.5;
   }
 
-  .height-cost-cue,
-  .core-formula,
-  .learning-loop,
-  .scene-legend {
-    display: none;
+  .learn-panel > * {
+    max-width: 42rem;
+  }
+
+  .learn-panel .height-cost-cue {
+    margin-top: 16px;
+  }
+
+  .learn-panel .core-formula {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    white-space: normal;
+  }
+
+  .learn-panel .core-formula > span {
+    white-space: nowrap;
+  }
+
+  .learn-panel .learning-loop-heading span:last-child {
+    text-align: right;
+  }
+
+  .learn-panel .scene-legend {
+    display: grid;
+    padding-bottom: 8px;
   }
 
   .live-signal {
@@ -1722,6 +1742,28 @@ a:focus-visible {
     font-size: 22px;
   }
 
+  .learn-panel .core-formula {
+    width: 100%;
+    padding: 10px;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .learn-panel .learning-loop-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .learn-panel .learning-loop-heading span:last-child {
+    text-align: left;
+  }
+
+  .learn-panel .learning-loop ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 14px;
+  }
+
   .transport {
     gap: 5px;
     padding-right: max(6px, env(safe-area-inset-right));
@@ -1831,6 +1873,28 @@ a:focus-visible {
   .setup-panel,
   .playback-panel {
     padding: 10px 12px;
+  }
+
+  .learn-panel .core-formula {
+    width: 100%;
+    padding: 10px;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  .learn-panel .learning-loop-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .learn-panel .learning-loop-heading span:last-child {
+    text-align: left;
+  }
+
+  .learn-panel .learning-loop ol {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 14px;
   }
 
   .control-heading {
