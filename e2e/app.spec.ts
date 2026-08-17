@@ -118,6 +118,48 @@ async function expectResponsiveRegionsSeparated(page: Page) {
   expect(canvas!.height).toBeGreaterThanOrEqual(scene!.height - 1);
 }
 
+async function expectMobileLearnContent(page: Page) {
+  const learnPanel = page.getByRole('tabpanel', { name: 'Learn' });
+  const teachingSections = [
+    page.locator('.cost-definition'),
+    page.locator('.height-cost-cue'),
+    page.locator('.core-formula'),
+    page.locator('.learning-loop'),
+    page.locator('.scene-legend'),
+  ];
+
+  await expect(learnPanel).toBeVisible();
+  for (const section of teachingSections) {
+    await expect(section).toBeVisible();
+  }
+
+  const hasHorizontalOverflow = await learnPanel.evaluate((panel) =>
+    panel.scrollWidth > panel.clientWidth + 1
+  );
+  expect(hasHorizontalOverflow, 'Learn content must not overflow horizontally').toBe(false);
+
+  const finalLegendCopy = page.getByText(
+    'The amber rings mark a stationary point, not a minimum.',
+  );
+  await finalLegendCopy.scrollIntoViewIfNeeded();
+  await expect(finalLegendCopy).toBeInViewport();
+
+  const [panelBox, finalCopyBox, transportBox] = await Promise.all([
+    learnPanel.boundingBox(),
+    finalLegendCopy.boundingBox(),
+    page.getByRole('group', { name: 'Simulation controls' }).boundingBox(),
+  ]);
+  expect(panelBox).not.toBeNull();
+  expect(finalCopyBox).not.toBeNull();
+  expect(transportBox).not.toBeNull();
+  expect(finalCopyBox!.x).toBeGreaterThanOrEqual(panelBox!.x);
+  expect(finalCopyBox!.x + finalCopyBox!.width)
+    .toBeLessThanOrEqual(panelBox!.x + panelBox!.width + 0.5);
+  expect(finalCopyBox!.y).toBeGreaterThanOrEqual(panelBox!.y);
+  expect(finalCopyBox!.y + finalCopyBox!.height)
+    .toBeLessThanOrEqual(transportBox!.y + 0.5);
+}
+
 async function expectNewLossRun(page: Page, previousRunId: number): Promise<number> {
   const summary = page.locator('#loss-history-summary');
   await expect.poll(async () => Number(await summary.getAttribute('data-run-id')))
@@ -257,6 +299,7 @@ for (const viewport of [
     await learnTab.click();
     await expect(page.getByRole('heading', { name: 'See why saddles are tricky.' }))
       .toBeVisible();
+    await expectMobileLearnContent(page);
     await expect(transport).toBeVisible();
 
     await page.getByRole('button', { name: 'Advance one iteration' }).click();
@@ -274,6 +317,26 @@ for (const viewport of [
       .toBeLessThanOrEqual(viewport.width);
   });
 }
+
+test('explains the gradient descent formula from the mobile Learn tab', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await openReadyApp(page);
+  await page.getByRole('tab', { name: 'Learn' }).click();
+
+  const trigger = page.getByRole('button', {
+    name: 'Explain Gradient descent formula',
+  });
+  await trigger.scrollIntoViewIfNeeded();
+  await trigger.click();
+
+  const tooltip = page.getByRole('tooltip');
+  await expect(tooltip).toBeVisible();
+  await expect(tooltip).toContainText('Theta at t is the current position');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(375);
+});
 
 test('supports keyboard navigation across responsive tabs', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 667 });
