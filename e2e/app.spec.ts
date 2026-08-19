@@ -27,7 +27,23 @@ function captureActionableWarnings(page: Page): string[] {
   return warnings;
 }
 
-async function openReadyApp(page: Page) {
+async function openReadyApp(
+  page: Page,
+  { lowGraphics = false }: { lowGraphics?: boolean } = {},
+) {
+  if (lowGraphics) {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'deviceMemory', {
+        configurable: true,
+        value: 2,
+      });
+      Object.defineProperty(navigator, 'hardwareConcurrency', {
+        configurable: true,
+        value: 2,
+      });
+    });
+  }
+
   await page.goto('/');
   await expect(page).toHaveTitle('Ascent | Gradient Descent, Made Visible');
   await expect(page.getByRole('link', { name: 'Ascent home' })).toBeVisible();
@@ -459,42 +475,52 @@ test('keeps keyboard shortcuts scoped away from interactive controls', async ({ 
 test('reviews retained iterations and continues from the true live endpoint', async ({
   page,
 }) => {
-  await openReadyApp(page);
+  await openReadyApp(page, { lowGraphics: true });
   const step = page.getByRole('button', { name: 'Advance one iteration' });
   const iteration = page.locator('.metrics-grid output').nth(3);
+  const slider = page.getByRole('slider', { name: 'Retained iteration' });
 
-  for (let index = 0; index < 4; index += 1) await step.click();
+  for (let index = 1; index <= 4; index += 1) {
+    await step.dispatchEvent('click');
+    await expect(slider).toHaveAttribute('max', String(index));
+  }
   await expect(iteration).toHaveText('4');
 
-  const slider = page.getByRole('slider', { name: 'Retained iteration' });
-  await expect(slider).toHaveAttribute('max', '4');
   await page.getByRole('button', { name: 'Previous retained iteration' }).click();
 
   await expect(page.getByText('Review mode')).toBeVisible();
-  await expect(iteration).toHaveText('3');
   await expect(page.locator('.step-result-heading').getByText('Selected step'))
     .toBeVisible();
   await expect(page.locator('.primary-action')).toBeDisabled();
   await expect(step).toBeDisabled();
   await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 3,/);
+  await expect(iteration).toHaveText('3');
 
   await slider.focus();
   await slider.press('ArrowLeft');
-  await expect(iteration).toHaveText('2');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 2,/);
   await slider.press('Shift+ArrowLeft');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 0,/);
   await expect(iteration).toHaveText('0');
 
-  await page.getByRole('button', { name: 'Latest retained iteration' }).click();
-  await page.getByRole('button', { name: 'Previous retained iteration' }).click();
-  await expect(iteration).toHaveText('3');
+  await page.getByRole('button', { name: 'Latest retained iteration' })
+    .dispatchEvent('click');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 4,/);
+  await page.getByRole('button', { name: 'Previous retained iteration' })
+    .dispatchEvent('click');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 3,/);
   await page.getByLabel('Playback speed').selectOption('62.5');
   await page.getByRole('button', { name: 'Play playback' }).click();
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 4,/, {
+    timeout: 5_000,
+  });
   await expect(iteration).toHaveText('4', { timeout: 5_000 });
   await expect(page.getByText('Review mode')).toBeHidden();
   await expect(page.locator('.primary-action')).toBeEnabled();
   await expect(step).toBeEnabled();
 
   await step.click();
+  await expect(slider).toHaveAttribute('max', '5');
   await expect(iteration).toHaveText('5');
 });
 

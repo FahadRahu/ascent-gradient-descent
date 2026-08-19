@@ -144,6 +144,8 @@ function LiveSignal({
   runOutcome,
   graphicsStatus,
 }: LiveSignalProps) {
+  const mode = useUIStore((state) => state.mode);
+  const scrubIndex = useUIStore((state) => state.scrubIndex);
   const thetaRef = useRef<HTMLOutputElement>(null);
   const gradientRef = useRef<HTMLOutputElement>(null);
   const costRef = useRef<HTMLOutputElement>(null);
@@ -186,26 +188,35 @@ function LiveSignal({
       }
 
       const state = simStore.getState();
-      const gradient = fn.grad(state.theta);
       const handle = getSimRunnerHandle();
-      const ui = useUIStore.getState();
       const selection = resolveHistorySelection(
         handle.history,
-        ui.mode,
-        ui.scrubIndex,
+        mode,
+        scrubIndex,
       );
       const currentEntry = selection.selected;
       const previousEntry = selection.previous;
+      const displayedTheta = mode === 'review'
+        ? currentEntry?.theta ?? state.theta
+        : state.theta;
+      const displayedCost = mode === 'review'
+        ? currentEntry?.cost ?? state.cost
+        : state.cost;
+      const displayedIteration = mode === 'review'
+        ? currentEntry?.iteration ?? state.iteration
+        : state.iteration;
+      const displayedDiverged = mode === 'review' ? false : state.diverged;
+      const gradient = fn.grad(displayedTheta);
       const goalCost = goalCostForFunction(fn);
       const feedback = classifyCostStep(
         previousEntry?.cost ?? null,
-        currentEntry?.cost ?? state.cost,
+        displayedCost,
         goalCost,
-        state.diverged,
+        displayedDiverged,
       );
-      const status = ui.mode === 'review'
+      const status = mode === 'review'
         ? isPlaying ? 'Review playing' : 'Reviewing'
-        : runOutcome === 'diverged' || state.diverged
+        : runOutcome === 'diverged' || displayedDiverged
           ? 'Diverged'
           : runOutcome === 'converged' || feedback.state === 'reached'
             ? 'At minimum'
@@ -216,28 +227,28 @@ function LiveSignal({
                 : 'Ready';
 
       if (stepHeadingRef.current) {
-        stepHeadingRef.current.textContent = ui.mode === 'review'
+        stepHeadingRef.current.textContent = mode === 'review'
           ? 'Selected step'
           : 'Latest step';
       }
       if (thetaRef.current) {
-        thetaRef.current.textContent = `(${formatNumber(state.theta[0])}, ${formatNumber(state.theta[1])})`;
+        thetaRef.current.textContent = `(${formatNumber(displayedTheta[0])}, ${formatNumber(displayedTheta[1])})`;
       }
       if (gradientRef.current) {
         gradientRef.current.textContent = `(${formatNumber(gradient[0])}, ${formatNumber(gradient[1])})`;
       }
-      if (costRef.current) costRef.current.textContent = formatNumber(state.cost);
+      if (costRef.current) costRef.current.textContent = formatNumber(displayedCost);
       if (iterationRef.current) {
-        iterationRef.current.textContent = state.iteration.toLocaleString();
+        iterationRef.current.textContent = displayedIteration.toLocaleString();
       }
       if (stepBeforeRef.current) {
         stepBeforeRef.current.textContent = formatCost(
-          previousEntry?.cost ?? currentEntry?.cost ?? state.cost,
+          previousEntry?.cost ?? displayedCost,
         );
       }
       if (stepAfterRef.current) {
         stepAfterRef.current.textContent = previousEntry
-          ? formatCost(currentEntry?.cost ?? state.cost)
+          ? formatCost(displayedCost)
           : '--';
       }
       if (goalCostRef.current) {
@@ -270,13 +281,20 @@ function LiveSignal({
     };
 
     const unsubscribe = simStore.subscribe(scheduleUpdate);
-    scheduleUpdate();
+    update();
 
     return () => {
       unsubscribe();
       if (pendingFrame !== 0) window.cancelAnimationFrame(pendingFrame);
     };
-  }, [functionId, graphicsStatus, isPlaying, runOutcome]);
+  }, [
+    functionId,
+    graphicsStatus,
+    isPlaying,
+    mode,
+    runOutcome,
+    scrubIndex,
+  ]);
 
   return (
     <section className="live-signal" aria-labelledby="live-signal-title">
