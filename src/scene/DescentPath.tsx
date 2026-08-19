@@ -8,6 +8,7 @@ import { getFunction } from '../engine/functions';
 import type { Tier } from '../quality/tiers';
 import { historyToWorldPoints, buildTubeGeometry, revealProgress } from './pathGeometry';
 import { getSimRunnerHandle } from '../state/simHistory';
+import { resolveHistorySelection } from '../state/playbackHistory';
 import { pathVertexShader, pathFragmentShader } from './shaders/pathShaders';
 import type { HaloUniformRef } from './heroRefs';
 
@@ -62,6 +63,7 @@ export default function DescentPath({ materialUniformsRef }: DescentPathProps = 
   const meshRef = useRef<THREE.Mesh>(null);
   const lastRunId = useRef(-1);
   const lastLen = useRef(0);
+  const lastTipIteration = useRef(-1);
   const builtIteration = useRef(0);
 
   const uniforms = useMemo<PathUniforms>(
@@ -86,14 +88,17 @@ export default function DescentPath({ materialUniformsRef }: DescentPathProps = 
     const mesh = meshRef.current;
     if (!mesh) return;
     const h = getSimRunnerHandle();
-    const { functionId } = useUIStore.getState();
+    const { functionId, mode, scrubIndex } = useUIStore.getState();
     const fn = getFunction(functionId);
     const history = h.history;
+    const selection = resolveHistorySelection(history, mode, scrubIndex);
+    const tipIteration = selection.selected?.iteration ?? -1;
 
     // Run change → dispose + reset (rebuilt below from >=2 points).
     if (h.runId !== lastRunId.current) {
       lastRunId.current = h.runId;
       lastLen.current = 0;
+      lastTipIteration.current = -1;
       builtIteration.current = 0;
       const old = mesh.geometry;
       mesh.geometry = EMPTY_GEOMETRY;
@@ -102,25 +107,40 @@ export default function DescentPath({ materialUniformsRef }: DescentPathProps = 
       invalidate();
     }
 
-    // Rebuild only when the polyline gained points (≤ once per sim step). Constant
-    // vertex budget via the tier cap. Direct geometry swap — no setState.
-    if (history.length !== lastLen.current && history.length >= 2) {
-      lastLen.current = history.length;
-      builtIteration.current = h.iteration;
-      const { tubular, radial } = pathBudget(tier);
-      const pts = historyToWorldPoints(history, fn.domain, functionId);
-      const next = buildTubeGeometry(pts, tubular, PATH_RADIUS, radial);
-      if (next) {
+    // Review can move backward as well as forward. Rebuild whenever the visible
+    // prefix changes, including when a full retained window shifts at its cap.
+    if (
+      selection.visibleLength !== lastLen.current ||
+      tipIteration !== lastTipIteration.current
+    ) {
+      lastLen.current = selection.visibleLength;
+      lastTipIteration.current = tipIteration;
+      builtIteration.current = tipIteration;
+
+      if (selection.visibleLength < 2) {
         const old = mesh.geometry;
-        mesh.geometry = next;
+        mesh.geometry = EMPTY_GEOMETRY;
         if (old && old !== EMPTY_GEOMETRY) old.dispose();
-        mesh.visible = true;
+        mesh.visible = false;
         invalidate();
+      } else {
+        const { tubular, radial } = pathBudget(tier);
+        const visibleHistory = history.slice(0, selection.visibleLength);
+        const pts = historyToWorldPoints(visibleHistory, fn.domain, functionId);
+        const next = buildTubeGeometry(pts, tubular, PATH_RADIUS, radial);
+        if (next) {
+          const old = mesh.geometry;
+          mesh.geometry = next;
+          if (old && old !== EMPTY_GEOMETRY) old.dispose();
+          mesh.visible = true;
+          invalidate();
+        }
       }
     }
 
-    // Frame-rate-independent reveal: rides ~1.0 (tip = ball) → leading glow.
-    uniforms.uProgress.value = revealProgress(h.iteration, builtIteration.current);
+    // In review the selected point is the path tip; in live mode this preserves
+    // the existing frame-rate-independent reveal behavior.
+    uniforms.uProgress.value = revealProgress(tipIteration, builtIteration.current);
   });
 
   // Seed the empty sentinel geometry ONCE at mount and dispose the live geometry

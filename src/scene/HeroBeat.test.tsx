@@ -12,6 +12,10 @@ function Host({ refs, emberRef }: { refs: ReturnType<typeof createHeroRefs>; emb
 }
 
 describe('HeroBeat (R3F structure smoke)', () => {
+  beforeEach(() => {
+    useUIStore.getState().reset();
+    simStore.getState().setDiverged(false);
+  });
   it('renders nothing and mutates the ball material on arrival without throwing', async () => {
     // Seed an arrived state: sphere at the minimum.
     useUIStore.getState().setFunctionId('sphere');
@@ -71,6 +75,35 @@ describe('HeroBeat (R3F structure smoke)', () => {
     await renderer.unmount();
   });
 
+  it('suppresses terminal cinematics while reviewing a historical entry', async () => {
+    resetSimRunnerHandle([
+      { iteration: 0, theta: [2, 2], cost: 8 },
+      { iteration: 1, theta: [1, 1], cost: 2 },
+    ]);
+    useUIStore.getState().setRunOutcome('diverged');
+    useUIStore.getState().selectHistoryIndex(0, 1);
+    simStore.getState().setSnapshot({
+      theta: [2, 2],
+      iteration: 0,
+      cost: 8,
+      diverged: true,
+    });
+
+    const refs = createHeroRefs();
+    const ballMat = new THREE.MeshPhysicalMaterial({
+      emissive: '#00D3F2',
+      emissiveIntensity: 3,
+    });
+    refs.ballMaterial.current = ballMat;
+    const emberRef = { current: null as THREE.Mesh | null };
+
+    const renderer = await ReactThreeTestRenderer.create(
+      <Host refs={refs} emberRef={emberRef} />,
+    );
+    await renderer.advanceFrames(60, 1 / 60);
+    expect(ballMat.emissiveIntensity).toBeCloseTo(3, 2);
+    await renderer.unmount();
+  });
   it('dims the ball core on divergence (the visual opposite)', async () => {
     useUIStore.getState().setFunctionId('rosenbrock');
     simStore.getState().setTheta([-1.2, 1]);

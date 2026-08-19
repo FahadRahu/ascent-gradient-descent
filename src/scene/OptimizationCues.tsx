@@ -7,6 +7,7 @@ import { getFunction } from '../engine/functions';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
 import { getSimRunnerHandle } from '../state/simHistory';
+import { resolveHistorySelection } from '../state/playbackHistory';
 import {
   SURFACE_SIZE,
   costToWorldHeight,
@@ -173,6 +174,7 @@ function StepMarkers() {
   const dummy = useMemo(() => new THREE.Object3D(), []);
   const lastRunId = useRef(-1);
   const lastHistoryLength = useRef(-1);
+  const lastTipIteration = useRef(-1);
   const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
@@ -187,18 +189,23 @@ function StepMarkers() {
     const mesh = meshRef.current;
     if (!mesh) return;
     const handle = getSimRunnerHandle();
+    const { functionId, mode, scrubIndex } = useUIStore.getState();
+    const selection = resolveHistorySelection(handle.history, mode, scrubIndex);
+    const tipIteration = selection.selected?.iteration ?? -1;
     if (
       handle.runId === lastRunId.current &&
-      handle.history.length === lastHistoryLength.current
+      selection.visibleLength === lastHistoryLength.current &&
+      tipIteration === lastTipIteration.current
     ) return;
 
     lastRunId.current = handle.runId;
-    lastHistoryLength.current = handle.history.length;
-    const { functionId } = useUIStore.getState();
+    lastHistoryLength.current = selection.visibleLength;
+    lastTipIteration.current = tipIteration;
     const fn = getFunction(functionId);
-    const stride = Math.max(1, Math.ceil(handle.history.length / MAX_STEP_MARKERS));
-    const sampled = handle.history.filter(
-      (_, index) => index % stride === 0 || index === handle.history.length - 1,
+    const visibleHistory = handle.history.slice(0, selection.visibleLength);
+    const stride = Math.max(1, Math.ceil(visibleHistory.length / MAX_STEP_MARKERS));
+    const sampled = visibleHistory.filter(
+      (_, index) => index % stride === 0 || index === visibleHistory.length - 1,
     );
     const visible = Math.min(sampled.length, MAX_STEP_MARKERS);
 

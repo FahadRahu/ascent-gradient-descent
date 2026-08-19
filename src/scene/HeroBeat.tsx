@@ -51,7 +51,8 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
     const u = useUIStore.getState();
     const fn = getFunction(u.functionId);
     const simulation = getSimRunnerHandle();
-    const runId = String(simulation.runId);
+    const reviewMode = u.mode === 'review';
+    const runId = `${simulation.runId}:${u.mode}`;
 
     // Run change resets the convergence trackers AND the ember ring. The state
     // machine resets to 'idle' on a runId change, but 'idle' does not touch the
@@ -69,7 +70,7 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
 
     // Trigger evaluation (skipped while diverged — the machine handles that).
     let arrived = false;
-    if (!diverged) {
+    if (!diverged && !reviewMode) {
       const tracked = trackArrival(arrivalTrackerRef.current, {
         runId: simulation.runId,
         iteration: simulation.iteration,
@@ -83,7 +84,11 @@ export default function HeroBeat({ refs, emberRef }: HeroBeatProps) {
     }
 
     // Advance the machine.
-    const next = advanceHero(heroRef.current, { arrived, diverged, runId }, dtMs);
+    const next = advanceHero(
+      heroRef.current,
+      { arrived, diverged: reviewMode ? false : diverged, runId },
+      dtMs,
+    );
     heroRef.current = next;
 
     // Drive the visuals by ref mutation (all null-guarded → tier-graceful).

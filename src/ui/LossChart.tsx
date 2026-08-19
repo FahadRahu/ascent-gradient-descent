@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { HistoryEntry } from '../engine/stepper';
+import { resolveHistorySelection } from '../state/playbackHistory';
 import { getSimRunnerHandle } from '../state/simHistory';
+import { useUIStore } from '../state/uiStore';
 import { simStore } from '../state/simStore';
 import { HelpTooltip } from './HelpTooltip';
 
@@ -81,9 +83,15 @@ export function LossChart() {
       const lineColor = styles.getPropertyValue('--chart-line').trim();
       const fillColor = styles.getPropertyValue('--chart-fill').trim();
       const handle = getSimRunnerHandle();
-      const history = handle.history.filter((entry) =>
-        Number.isFinite(entry.cost),
+      const { mode, scrubIndex } = useUIStore.getState();
+      const selection = resolveHistorySelection(
+        handle.history,
+        mode,
+        scrubIndex,
       );
+      const history = handle.history
+        .slice(0, selection.visibleLength)
+        .filter((entry) => Number.isFinite(entry.cost));
       const currentIteration = history[history.length - 1]?.iteration ?? -1;
 
       if (

@@ -15,38 +15,42 @@ export function SimulationTransport({
   graphicsStatus: GraphicsStatus;
 }) {
   const isPlaying = useUIStore((state) => state.isPlaying);
+  const mode = useUIStore((state) => state.mode);
   const runOutcome = useUIStore((state) => state.runOutcome);
   const setPlaying = useUIStore((state) => state.setPlaying);
   const stepOnce = useUIStore((state) => state.stepOnce);
   const resetCameraView = useUIStore((state) => state.resetCameraView);
   const restart = useUIStore((state) => state.restart);
   const controlsReady = graphicsStatus === 'ready';
+  const reviewing = mode === 'review';
   const runTerminal = runOutcome !== 'active';
 
   const primaryLabel = graphicsStatus === 'loading'
     ? 'Loading view'
     : graphicsStatus === 'unavailable'
       ? 'Unavailable'
-      : runOutcome === 'converged'
-        ? 'Minimum reached'
-        : runOutcome === 'diverged'
-          ? 'Run stopped'
-          : isPlaying
-            ? 'Pause'
-            : 'Run descent';
+      : reviewing
+        ? 'Reviewing history'
+        : runOutcome === 'converged'
+          ? 'Minimum reached'
+          : runOutcome === 'diverged'
+            ? 'Run stopped'
+            : isPlaying
+              ? 'Pause'
+              : 'Run descent';
 
   return (
     <div className="transport" role="group" aria-label="Simulation controls">
       <button
         type="button"
         className="primary-action"
-        aria-pressed={isPlaying}
-        disabled={!controlsReady || runTerminal}
+        aria-pressed={mode === 'live' && isPlaying}
+        disabled={!controlsReady || runTerminal || reviewing}
         onClick={() => setPlaying(!isPlaying)}
       >
-        {runOutcome === 'converged' ? (
+        {runOutcome === 'converged' && !reviewing ? (
           <CircleCheck size={17} aria-hidden="true" />
-        ) : isPlaying ? (
+        ) : isPlaying && !reviewing ? (
           <Pause size={17} fill="currentColor" aria-hidden="true" />
         ) : (
           <Play size={17} fill="currentColor" aria-hidden="true" />
@@ -58,7 +62,7 @@ export function SimulationTransport({
         className="secondary-action"
         aria-label="Advance one iteration"
         title="Advance exactly one iteration"
-        disabled={!controlsReady || runTerminal}
+        disabled={!controlsReady || runTerminal || reviewing}
         onClick={stepOnce}
       >
         <StepForward size={17} aria-hidden="true" />

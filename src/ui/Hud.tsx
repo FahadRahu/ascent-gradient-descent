@@ -14,6 +14,7 @@ import {
 } from '../engine/optimizers/registry';
 import type { OptimizerId } from '../engine/types';
 import { goalCostForFunction } from '../engine/goal';
+import { resolveHistorySelection } from '../state/playbackHistory';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
 import { getSimRunnerHandle } from '../state/simHistory';
@@ -25,6 +26,7 @@ import {
   ResponsiveTabs,
   type ResponsiveTabId,
 } from './ResponsiveTabs';
+import { Scrubber } from './Scrubber';
 import { SimulationTransport } from './SimulationTransport';
 
 const MOBILE_LAYOUT_QUERY = '(max-width: 820px)';
@@ -148,6 +150,7 @@ function LiveSignal({
   const iterationRef = useRef<HTMLOutputElement>(null);
   const statusRef = useRef<HTMLSpanElement>(null);
   const stepResultRef = useRef<HTMLDivElement>(null);
+  const stepHeadingRef = useRef<HTMLSpanElement>(null);
   const stepBeforeRef = useRef<HTMLOutputElement>(null);
   const stepAfterRef = useRef<HTMLOutputElement>(null);
   const goalCostRef = useRef<HTMLOutputElement>(null);
@@ -185,9 +188,14 @@ function LiveSignal({
       const state = simStore.getState();
       const gradient = fn.grad(state.theta);
       const handle = getSimRunnerHandle();
-      const history = handle.history;
-      const currentEntry = history[history.length - 1];
-      const previousEntry = history[history.length - 2];
+      const ui = useUIStore.getState();
+      const selection = resolveHistorySelection(
+        handle.history,
+        ui.mode,
+        ui.scrubIndex,
+      );
+      const currentEntry = selection.selected;
+      const previousEntry = selection.previous;
       const goalCost = goalCostForFunction(fn);
       const feedback = classifyCostStep(
         previousEntry?.cost ?? null,
@@ -195,16 +203,23 @@ function LiveSignal({
         goalCost,
         state.diverged,
       );
-      const status = runOutcome === 'diverged' || state.diverged
-        ? 'Diverged'
-        : runOutcome === 'converged' || feedback.state === 'reached'
-          ? 'At minimum'
-          : isPlaying
-            ? 'Descending'
-            : state.iteration > 0
-              ? 'Paused'
-              : 'Ready';
+      const status = ui.mode === 'review'
+        ? isPlaying ? 'Review playing' : 'Reviewing'
+        : runOutcome === 'diverged' || state.diverged
+          ? 'Diverged'
+          : runOutcome === 'converged' || feedback.state === 'reached'
+            ? 'At minimum'
+            : isPlaying
+              ? 'Descending'
+              : state.iteration > 0
+                ? 'Paused'
+                : 'Ready';
 
+      if (stepHeadingRef.current) {
+        stepHeadingRef.current.textContent = ui.mode === 'review'
+          ? 'Selected step'
+          : 'Latest step';
+      }
       if (thetaRef.current) {
         thetaRef.current.textContent = `(${formatNumber(state.theta[0])}, ${formatNumber(state.theta[1])})`;
       }
@@ -283,10 +298,10 @@ function LiveSignal({
         aria-atomic="true"
       >
         <div className="step-result-heading">
-          <span>Latest step</span>
+          <span ref={stepHeadingRef}>Latest step</span>
           <span>Goal cost <output ref={goalCostRef}>--</output></span>
         </div>
-        <div className="step-cost-change" aria-label="Cost before and after the latest step">
+        <div className="step-cost-change" aria-label="Cost before and after the selected step">
           <span>Cost <small>(objective)</small></span>
           <output ref={stepBeforeRef}>--</output>
           <ArrowRight size={14} aria-hidden="true" />
@@ -642,6 +657,7 @@ export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
               <code>{activeOptimizer.rule}</code>
             </div>
 
+            <Scrubber graphicsStatus={graphicsStatus} />
             <LossChart />
           </section>
         </aside>
