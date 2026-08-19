@@ -201,16 +201,13 @@ export function Scene({ onReady, onFailure }: SceneProps) {
   // update Canvas props (frameloop/dpr) is correct — it does NOT re-render the
   // in-canvas tree's transient state.
   const isPlaying = useUIStore((s) => s.isPlaying);
+  const mode = useUIStore((s) => s.mode);
   const tier = useUIStore((s) => s.tier);
   const settings = TIER_SETTINGS[tier];
 
-  // Power discipline (PRD §8.3): render every frame only while the descent is
-  // animating; otherwise render on demand (camera moves call invalidate() via
-  // OrbitControls; the sim runner invalidate()s on rebuild). No scrubber yet
-  // (M1c), so "live" is the only mode → frameloop = isPlaying ? always : demand.
-  // Toggling frameloop resets clock.elapsedTime, but the stepper uses per-frame
-  // delta (fixed-timestep accumulator), so the descent is unaffected.
-  const frameloop = isPlaying ? 'always' : 'demand';
+  // Review playback is timer-driven and invalidates only when the selected entry
+  // changes. The continuous render loop is reserved for a live descent.
+  const frameloop = mode === 'live' && isPlaying ? 'always' : 'demand';
 
   useEffect(() => {
     if (!settings.mountCanvas) onFailure?.();

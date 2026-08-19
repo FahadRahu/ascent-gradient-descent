@@ -27,7 +27,23 @@ function captureActionableWarnings(page: Page): string[] {
   return warnings;
 }
 
-async function openReadyApp(page: Page) {
+async function openReadyApp(
+  page: Page,
+  { lowGraphics = false }: { lowGraphics?: boolean } = {},
+) {
+  if (lowGraphics) {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'deviceMemory', {
+        configurable: true,
+        value: 2,
+      });
+      Object.defineProperty(navigator, 'hardwareConcurrency', {
+        configurable: true,
+        value: 2,
+      });
+    });
+  }
+
   await page.goto('/');
   await expect(page).toHaveTitle('Ascent | Gradient Descent, Made Visible');
   await expect(page.getByRole('link', { name: 'Ascent home' })).toBeVisible();
@@ -456,6 +472,81 @@ test('keeps keyboard shortcuts scoped away from interactive controls', async ({ 
   await expect(iteration).toHaveText('0');
 });
 
+test('reviews retained iterations and continues from the true live endpoint', async ({
+  page,
+}) => {
+  await openReadyApp(page, { lowGraphics: true });
+  const step = page.getByRole('button', { name: 'Advance one iteration' });
+  const iteration = page.locator('.metrics-grid output').nth(3);
+  const slider = page.getByRole('slider', { name: 'Retained iteration' });
+
+  for (let index = 1; index <= 4; index += 1) {
+    await step.dispatchEvent('click');
+    await expect(slider).toHaveAttribute('max', String(index));
+  }
+  await expect(iteration).toHaveText('4');
+
+  await page.getByRole('button', { name: 'Previous retained iteration' }).click();
+
+  await expect(page.getByText('Review mode')).toBeVisible();
+  await expect(page.locator('.step-result-heading').getByText('Selected step'))
+    .toBeVisible();
+  await expect(page.locator('.primary-action')).toBeDisabled();
+  await expect(step).toBeDisabled();
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 3,/);
+  await expect(iteration).toHaveText('3');
+
+  await slider.focus();
+  await slider.press('ArrowLeft');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 2,/);
+  await slider.press('Shift+ArrowLeft');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 0,/);
+  await expect(iteration).toHaveText('0');
+
+  await page.getByRole('button', { name: 'Latest retained iteration' })
+    .dispatchEvent('click');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 4,/);
+  await page.getByRole('button', { name: 'Previous retained iteration' })
+    .dispatchEvent('click');
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 3,/);
+  await page.getByLabel('Playback speed').selectOption('62.5');
+  await page.getByRole('button', { name: 'Play playback' }).click();
+  await expect(slider).toHaveAttribute('aria-valuetext', /Iteration 4,/, {
+    timeout: 5_000,
+  });
+  await expect(iteration).toHaveText('4', { timeout: 5_000 });
+  await expect(page.getByText('Review mode')).toBeHidden();
+  await expect(page.locator('.primary-action')).toBeEnabled();
+  await expect(step).toBeEnabled();
+
+  await step.click();
+  await expect(slider).toHaveAttribute('max', '5');
+  await expect(iteration).toHaveText('5');
+});
+
+test('keeps scrubber controls touch-sized without mobile landscape overflow', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 812, height: 375 });
+  await openReadyApp(page);
+  const step = page.getByRole('button', { name: 'Advance one iteration' });
+  for (let index = 0; index < 3; index += 1) await step.click();
+
+  await page.getByRole('tab', { name: 'Playback' }).click();
+  await expect(page.getByRole('tabpanel', { name: 'Playback' })).toBeVisible();
+  const controls = page.locator('.scrubber-controls button');
+  await expect(controls).toHaveCount(7);
+  for (let index = 0; index < 7; index += 1) {
+    const box = await controls.nth(index).boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+
+  await expectResponsiveRegionsSeparated(page);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth))
+    .toBeLessThanOrEqual(812);
+});
 test('prioritizes scene labels through initial, descent, and converged states', async ({
   page,
 }) => {

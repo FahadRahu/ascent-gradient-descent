@@ -2,8 +2,8 @@ import { createStore } from 'zustand/vanilla';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type { Vec2 } from '../engine/types';
 
-/** Channel B — fast, transient simulation state. Read via getState()/subscribe()
- *  into refs inside useFrame (PRD §8.2); the 3D objects are mutated directly.
+/** Channel B - fast, transient simulation state. Read via getState()/subscribe()
+ *  into refs inside useFrame (PRD section 8.2); the 3D objects are mutated directly.
  *  This is a VANILLA store (not a React hook) so reads/writes never schedule a
  *  React render. */
 export interface SimState {
@@ -11,11 +11,17 @@ export interface SimState {
   iteration: number;
   cost: number;
   diverged: boolean;
+  setSnapshot: (snapshot: SimSnapshot) => void;
   setTheta: (theta: Vec2) => void;
   setIteration: (iteration: number) => void;
   setCost: (cost: number) => void;
   setDiverged: (diverged: boolean) => void;
 }
+
+export type SimSnapshot = Pick<
+  SimState,
+  'theta' | 'iteration' | 'cost' | 'diverged'
+>;
 
 export const simStore = createStore<SimState>()(
   subscribeWithSelector((set) => ({
@@ -23,6 +29,7 @@ export const simStore = createStore<SimState>()(
     iteration: 0,
     cost: 0,
     diverged: false,
+    setSnapshot: (snapshot) => set(snapshot),
     setTheta: (theta) => set({ theta }),
     setIteration: (iteration) => set({ iteration }),
     setCost: (cost) => set({ cost }),

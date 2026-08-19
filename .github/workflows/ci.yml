@@ -12,6 +12,11 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      # Keep this image version aligned with @playwright/test in package-lock.json.
+      image: mcr.microsoft.com/playwright:v1.61.1-noble@sha256:5b8f294aff9041b7191c34a4bab3ac270157a28774d4b0660e9743297b697e48
+      options: --ipc=host
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -35,9 +40,15 @@ jobs:
         run: npm run build
       - name: Bundle budget
         run: npm run check:bundle
-      - name: Install browser engines
-        run: npx --no-install playwright install --with-deps chromium webkit
       - name: Browser and accessibility tests
         run: npm run test:e2e
       - name: Mobile slow-4G readiness SLO
         run: npm run test:performance
+      - name: Upload Playwright failure artifacts
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 7

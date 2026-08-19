@@ -14,6 +14,7 @@ import {
 } from '../engine/optimizers/registry';
 import type { OptimizerId } from '../engine/types';
 import { goalCostForFunction } from '../engine/goal';
+import { resolveHistorySelection } from '../state/playbackHistory';
 import { simStore } from '../state/simStore';
 import { useUIStore } from '../state/uiStore';
 import { getSimRunnerHandle } from '../state/simHistory';
@@ -25,6 +26,7 @@ import {
   ResponsiveTabs,
   type ResponsiveTabId,
 } from './ResponsiveTabs';
+import { Scrubber } from './Scrubber';
 import { SimulationTransport } from './SimulationTransport';
 
 const MOBILE_LAYOUT_QUERY = '(max-width: 820px)';
@@ -142,12 +144,15 @@ function LiveSignal({
   runOutcome,
   graphicsStatus,
 }: LiveSignalProps) {
+  const mode = useUIStore((state) => state.mode);
+  const scrubIndex = useUIStore((state) => state.scrubIndex);
   const thetaRef = useRef<HTMLOutputElement>(null);
   const gradientRef = useRef<HTMLOutputElement>(null);
   const costRef = useRef<HTMLOutputElement>(null);
   const iterationRef = useRef<HTMLOutputElement>(null);
   const statusRef = useRef<HTMLSpanElement>(null);
   const stepResultRef = useRef<HTMLDivElement>(null);
+  const stepHeadingRef = useRef<HTMLSpanElement>(null);
   const stepBeforeRef = useRef<HTMLOutputElement>(null);
   const stepAfterRef = useRef<HTMLOutputElement>(null);
   const goalCostRef = useRef<HTMLOutputElement>(null);
@@ -183,46 +188,67 @@ function LiveSignal({
       }
 
       const state = simStore.getState();
-      const gradient = fn.grad(state.theta);
       const handle = getSimRunnerHandle();
-      const history = handle.history;
-      const currentEntry = history[history.length - 1];
-      const previousEntry = history[history.length - 2];
+      const selection = resolveHistorySelection(
+        handle.history,
+        mode,
+        scrubIndex,
+      );
+      const currentEntry = selection.selected;
+      const previousEntry = selection.previous;
+      const displayedTheta = mode === 'review'
+        ? currentEntry?.theta ?? state.theta
+        : state.theta;
+      const displayedCost = mode === 'review'
+        ? currentEntry?.cost ?? state.cost
+        : state.cost;
+      const displayedIteration = mode === 'review'
+        ? currentEntry?.iteration ?? state.iteration
+        : state.iteration;
+      const displayedDiverged = mode === 'review' ? false : state.diverged;
+      const gradient = fn.grad(displayedTheta);
       const goalCost = goalCostForFunction(fn);
       const feedback = classifyCostStep(
         previousEntry?.cost ?? null,
-        currentEntry?.cost ?? state.cost,
+        displayedCost,
         goalCost,
-        state.diverged,
+        displayedDiverged,
       );
-      const status = runOutcome === 'diverged' || state.diverged
-        ? 'Diverged'
-        : runOutcome === 'converged' || feedback.state === 'reached'
-          ? 'At minimum'
-          : isPlaying
-            ? 'Descending'
-            : state.iteration > 0
-              ? 'Paused'
-              : 'Ready';
+      const status = mode === 'review'
+        ? isPlaying ? 'Review playing' : 'Reviewing'
+        : runOutcome === 'diverged' || displayedDiverged
+          ? 'Diverged'
+          : runOutcome === 'converged' || feedback.state === 'reached'
+            ? 'At minimum'
+            : isPlaying
+              ? 'Descending'
+              : state.iteration > 0
+                ? 'Paused'
+                : 'Ready';
 
+      if (stepHeadingRef.current) {
+        stepHeadingRef.current.textContent = mode === 'review'
+          ? 'Selected step'
+          : 'Latest step';
+      }
       if (thetaRef.current) {
-        thetaRef.current.textContent = `(${formatNumber(state.theta[0])}, ${formatNumber(state.theta[1])})`;
+        thetaRef.current.textContent = `(${formatNumber(displayedTheta[0])}, ${formatNumber(displayedTheta[1])})`;
       }
       if (gradientRef.current) {
         gradientRef.current.textContent = `(${formatNumber(gradient[0])}, ${formatNumber(gradient[1])})`;
       }
-      if (costRef.current) costRef.current.textContent = formatNumber(state.cost);
+      if (costRef.current) costRef.current.textContent = formatNumber(displayedCost);
       if (iterationRef.current) {
-        iterationRef.current.textContent = state.iteration.toLocaleString();
+        iterationRef.current.textContent = displayedIteration.toLocaleString();
       }
       if (stepBeforeRef.current) {
         stepBeforeRef.current.textContent = formatCost(
-          previousEntry?.cost ?? currentEntry?.cost ?? state.cost,
+          previousEntry?.cost ?? displayedCost,
         );
       }
       if (stepAfterRef.current) {
         stepAfterRef.current.textContent = previousEntry
-          ? formatCost(currentEntry?.cost ?? state.cost)
+          ? formatCost(displayedCost)
           : '--';
       }
       if (goalCostRef.current) {
@@ -255,13 +281,20 @@ function LiveSignal({
     };
 
     const unsubscribe = simStore.subscribe(scheduleUpdate);
-    scheduleUpdate();
+    update();
 
     return () => {
       unsubscribe();
       if (pendingFrame !== 0) window.cancelAnimationFrame(pendingFrame);
     };
-  }, [functionId, graphicsStatus, isPlaying, runOutcome]);
+  }, [
+    functionId,
+    graphicsStatus,
+    isPlaying,
+    mode,
+    runOutcome,
+    scrubIndex,
+  ]);
 
   return (
     <section className="live-signal" aria-labelledby="live-signal-title">
@@ -283,10 +316,10 @@ function LiveSignal({
         aria-atomic="true"
       >
         <div className="step-result-heading">
-          <span>Latest step</span>
+          <span ref={stepHeadingRef}>Latest step</span>
           <span>Goal cost <output ref={goalCostRef}>--</output></span>
         </div>
-        <div className="step-cost-change" aria-label="Cost before and after the latest step">
+        <div className="step-cost-change" aria-label="Cost before and after the selected step">
           <span>Cost <small>(objective)</small></span>
           <output ref={stepBeforeRef}>--</output>
           <ArrowRight size={14} aria-hidden="true" />
@@ -642,6 +675,7 @@ export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
               <code>{activeOptimizer.rule}</code>
             </div>
 
+            <Scrubber graphicsStatus={graphicsStatus} />
             <LossChart />
           </section>
         </aside>

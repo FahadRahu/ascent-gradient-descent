@@ -50,6 +50,21 @@ describe('SimulationTransport', () => {
       .toBe(cameraResetRequest + 1);
   });
 
+  it('keeps live Run and Step controls unavailable during review', () => {
+    useUIStore.getState().selectHistoryIndex(0, 3);
+    act(() => {
+      root.render(<SimulationTransport graphicsStatus="ready" />);
+    });
+
+    const primary = container.querySelector<HTMLButtonElement>('.primary-action')!;
+    expect(primary.disabled).toBe(true);
+    expect(primary.textContent).toContain('Reviewing history');
+    expect(getButton('Advance one iteration').disabled).toBe(true);
+    expect(getButton('Restart optimization').disabled).toBe(false);
+
+    act(() => getButton('Restart optimization').click());
+    expect(useUIStore.getState().mode).toBe('live');
+  });
   it('disables simulation actions while graphics are unavailable', () => {
     act(() => {
       root.render(<SimulationTransport graphicsStatus="unavailable" />);
