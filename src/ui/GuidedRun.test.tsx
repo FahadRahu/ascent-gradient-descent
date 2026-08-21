@@ -6,6 +6,8 @@ import type { ResponsiveTabId } from './ResponsiveTabs';
 import { GuidedRun } from './GuidedRun';
 
 const driverMocks = vi.hoisted(() => {
+  let importGate = Promise.resolve();
+  let releaseImport: (() => void) | null = null;
   const instance = {
     destroy: vi.fn(),
     drive: vi.fn(),
@@ -16,12 +18,23 @@ const driverMocks = vi.hoisted(() => {
   return {
     factory: vi.fn<(config: Record<string, any>) => typeof instance>(() => instance),
     instance,
+    deferImport: () => {
+      importGate = new Promise<void>((resolve) => {
+        releaseImport = resolve;
+      });
+    },
+    releaseImport: () => {
+      releaseImport?.();
+      releaseImport = null;
+    },
+    waitForImport: () => importGate,
   };
 });
 
-vi.mock('driver.js', () => ({
-  driver: driverMocks.factory,
-}));
+vi.mock('driver.js', async () => {
+  await driverMocks.waitForImport();
+  return { driver: driverMocks.factory };
+});
 
 describe('GuidedRun', () => {
   let container: HTMLDivElement;
@@ -91,6 +104,27 @@ describe('GuidedRun', () => {
     expect(button.disabled).toBe(true);
     expect(button.textContent).toContain('Guided run');
     expect(driverMocks.factory).not.toHaveBeenCalled();
+  });
+
+  it('shows loading feedback while the tour bundle is pending', async () => {
+    driverMocks.deferImport();
+    const button = render();
+
+    act(() => button.click());
+
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.textContent).toContain('Loading guide');
+    expect(button.querySelector('.lucide-loader-circle')).not.toBeNull();
+
+    await act(async () => {
+      driverMocks.releaseImport();
+      await vi.waitFor(() => {
+        expect(driverMocks.factory).toHaveBeenCalledTimes(1);
+      });
+    });
+    expect(button.getAttribute('aria-busy')).toBe('false');
+    expect(button.querySelector('.lucide-loader-circle')).toBeNull();
   });
 
   it('starts a five-step reduced-motion tour without writing browser storage', async () => {

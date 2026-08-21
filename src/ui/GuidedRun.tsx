@@ -1,4 +1,4 @@
-import { Route } from 'lucide-react';
+import { LoaderCircle, Route } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { Driver } from 'driver.js';
 import type { GraphicsStatus } from './GraphicsState';
@@ -221,11 +221,16 @@ export function GuidedRun({
         type="button"
         className="guided-run-trigger"
         data-state={loadState}
+        aria-busy={loadState === 'loading'}
         disabled={graphicsStatus !== 'ready' || loadState === 'loading'}
         title="Tour the experiment controls"
         onClick={() => void startTour()}
       >
-        <Route size={16} aria-hidden="true" />
+        {loadState === 'loading' ? (
+          <LoaderCircle className="control-spinner" size={16} aria-hidden="true" />
+        ) : (
+          <Route size={16} aria-hidden="true" />
+        )}
         <span>{buttonLabel}</span>
       </button>
       <span className="sr-only" role="status" aria-live="polite">
