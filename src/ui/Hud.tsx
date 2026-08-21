@@ -26,6 +26,7 @@ import {
   ResponsiveTabs,
   type ResponsiveTabId,
 } from './ResponsiveTabs';
+import { GuidedRun } from './GuidedRun';
 import { Scrubber } from './Scrubber';
 import { SimulationTransport } from './SimulationTransport';
 
@@ -576,10 +577,14 @@ export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
                 <span className="section-kicker">Experiment</span>
                 <h2 id="setup-title">Run setup</h2>
               </div>
-              <Activity size={18} aria-hidden="true" />
+              <GuidedRun
+                graphicsStatus={graphicsStatus}
+                activeTab={activeTab}
+                onSelectTab={setActiveTab}
+              />
             </div>
 
-            <div className="control-group">
+            <div className="control-group" data-tour="landscape">
               <label htmlFor="landscape-select">
                 <span><MapIcon size={15} aria-hidden="true" /> Landscape</span>
               </label>
@@ -601,7 +606,7 @@ export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
               <p className="control-note">{activeFunction.teaches}</p>
             </div>
 
-            <div className="control-group">
+            <div className="control-group" data-tour="optimizer">
               <label htmlFor="optimizer-select">
                 <span><Activity size={15} aria-hidden="true" /> Optimizer</span>
               </label>
@@ -621,7 +626,10 @@ export function Hud({ graphicsStatus }: { graphicsStatus: GraphicsStatus }) {
               <p className="control-note">{activeOptimizer.note}</p>
             </div>
 
-            <div className="control-group learning-rate-control">
+            <div
+              className="control-group learning-rate-control"
+              data-tour="learning-rate"
+            >
               <div className="control-label-row">
                 <label htmlFor="learning-rate">
                   <span><Gauge size={15} aria-hidden="true" /> Learning rate</span>

@@ -994,6 +994,66 @@ a:focus-visible {
   color: var(--color-cyan);
 }
 
+.guided-run {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.guided-run-trigger {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 11px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  background: rgba(255, 255, 255, 0.045);
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.guided-run-trigger:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan-strong);
+  background: rgba(85, 227, 241, 0.08);
+}
+
+.guided-run-trigger:active {
+  color: var(--color-text);
+  background: rgba(85, 227, 241, 0.14);
+}
+
+.guided-run-trigger:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.guided-run-trigger[data-state="error"] {
+  border-color: var(--color-amber);
+  color: var(--color-amber);
+}
+
+.guided-run-trigger:disabled {
+  border-color: var(--color-border);
+  color: var(--color-dim);
+  background: rgba(255, 255, 255, 0.025);
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
 .control-group {
   padding: 16px 0;
   border-bottom: 1px solid var(--color-border);
@@ -1406,6 +1466,152 @@ a:focus-visible {
 
 .scene-label-goal {
   border-color: rgba(255, 185, 87, 0.58);
+}
+
+.driver-popover.ascent-tour-popover {
+  width: min(300px, calc(100vw - 24px));
+  min-width: min(250px, calc(100vw - 24px));
+  max-width: 300px;
+  padding: 16px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--color-text);
+  background: var(--color-panel-solid);
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.52);
+  font-family: var(--font-sans);
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-title {
+  min-height: 28px;
+  padding-right: 38px;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1.35;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-description {
+  margin-top: 7px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-close-btn {
+  top: 4px;
+  right: 4px;
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  color: var(--color-muted);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-close-btn:hover,
+.driver-popover.ascent-tour-popover .driver-popover-close-btn:focus {
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-footer {
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-progress-text {
+  color: var(--color-dim);
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-navigation-btns {
+  gap: 8px;
+}
+
+.driver-popover.ascent-tour-popover
+  .driver-popover-navigation-btns
+  button
+  + button {
+  margin-left: 0;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-footer-btn {
+  display: inline-flex;
+  min-width: 72px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-footer-btn:hover,
+.driver-popover.ascent-tour-popover .driver-popover-footer-btn:focus {
+  border-color: var(--color-cyan);
+  color: var(--color-text);
+  background: rgba(85, 227, 241, 0.1);
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-next-btn {
+  border-color: var(--color-cyan);
+  color: var(--color-void);
+  background: var(--color-cyan);
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-next-btn:hover,
+.driver-popover.ascent-tour-popover .driver-popover-next-btn:focus {
+  color: var(--color-void);
+  background: var(--color-cyan-strong);
+}
+
+.driver-popover.ascent-tour-popover button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-arrow {
+  border-color: var(--color-panel-solid);
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-arrow-side-left {
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-arrow-side-right {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-arrow-side-top {
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  border-left-color: transparent;
+}
+
+.driver-popover.ascent-tour-popover .driver-popover-arrow-side-bottom {
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-left-color: transparent;
+}
+
+.driver-active .driver-active-element[data-tour] {
+  border-radius: var(--radius-md);
+  outline: 2px solid var(--color-cyan);
+  outline-offset: 4px;
 }
 
 @media (max-width: 1120px) {
