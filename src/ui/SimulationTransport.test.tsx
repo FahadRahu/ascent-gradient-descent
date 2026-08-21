@@ -65,13 +65,31 @@ describe('SimulationTransport', () => {
     act(() => getButton('Restart optimization').click());
     expect(useUIStore.getState().mode).toBe('live');
   });
+  it('reports loading while every simulation action is disabled', () => {
+    act(() => {
+      root.render(<SimulationTransport graphicsStatus="loading" />);
+    });
+
+    const group = container.querySelector('.transport')!;
+    const primary = container.querySelector<HTMLButtonElement>('.primary-action')!;
+    expect(group.getAttribute('aria-busy')).toBe('true');
+    expect(primary.textContent).toContain('Loading view');
+    expect(primary.querySelector('.lucide-loader-circle')).not.toBeNull();
+    for (const button of container.querySelectorAll('button')) {
+      expect(button.disabled).toBe(true);
+    }
+  });
+
   it('disables simulation actions while graphics are unavailable', () => {
     act(() => {
       root.render(<SimulationTransport graphicsStatus="unavailable" />);
     });
 
-    expect(container.querySelector('.primary-action')?.textContent)
-      .toContain('Unavailable');
+    const group = container.querySelector('.transport')!;
+    const primary = container.querySelector('.primary-action')!;
+    expect(group.getAttribute('aria-busy')).toBe('false');
+    expect(primary.textContent).toContain('Unavailable');
+    expect(primary.querySelector('.lucide-triangle-alert')).not.toBeNull();
     expect(getButton('Advance one iteration').disabled).toBe(true);
     expect(getButton('Restart optimization').disabled).toBe(true);
     expect(getButton('Reset camera view').disabled).toBe(true);
