@@ -40,7 +40,12 @@ export function SimulationTransport({
               : 'Run descent';
 
   return (
-    <div className="transport" role="group" aria-label="Simulation controls">
+    <div
+      className="transport"
+      role="group"
+      aria-label="Simulation controls"
+      data-tour="transport"
+    >
       <button
         type="button"
         className="primary-action"

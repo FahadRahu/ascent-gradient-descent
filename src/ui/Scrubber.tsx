@@ -254,6 +254,7 @@ export function Scrubber({ graphicsStatus }: { graphicsStatus: GraphicsStatus })
       <input
         ref={sliderRef}
         id="history-scrubber"
+        data-tour="scrubber"
         className={[
           'scrubber-range mt-[2px] h-[44px] w-full touch-pan-y appearance-none bg-transparent',
           'disabled:opacity-40',

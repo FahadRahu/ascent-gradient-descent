@@ -1,4 +1,4 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
 function capturePageErrors(page: Page): string[] {
@@ -194,6 +194,17 @@ async function expectLabelInsideViewport(page: Page, selector: string) {
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height);
 }
 
+async function expectLocatorInsideViewport(page: Page, locator: Locator) {
+  const box = await locator.boundingBox();
+  const viewport = page.viewportSize();
+  expect(box).not.toBeNull();
+  expect(viewport).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.y).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(viewport!.width + 0.5);
+  expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height + 0.5);
+}
+
 test('loads the lesson and advances one optimizer iteration', async ({ page }) => {
   const errors = capturePageErrors(page);
   await openReadyApp(page);
@@ -376,6 +387,129 @@ test('supports keyboard navigation across responsive tabs', async ({ page }) => 
   await expect(setupTab).toBeFocused();
   await expect(setupTab).toHaveAttribute('aria-selected', 'true');
 });
+
+test('runs the opt-in guided tour with keyboard control and focus restoration', async ({
+  page,
+  browserName,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openReadyApp(page);
+
+  const trigger = page.getByRole('button', { name: 'Guided run' });
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveCount(0);
+  expect(await page.evaluate(() => window.localStorage.length)).toBe(0);
+
+  await trigger.click();
+  await expect(dialog).toHaveAccessibleName('Choose a landscape');
+  await expect(dialog).toHaveAttribute('aria-modal', 'true');
+  const landscapeTarget = page.locator('[data-tour="landscape"]');
+  await expect(landscapeTarget).toHaveClass(/driver-active-element/);
+  await expect(landscapeTarget).not.toHaveAttribute('aria-expanded');
+  await expectLocatorInsideViewport(page, dialog);
+
+  const tourButtons = dialog.getByRole('button');
+  await expect(tourButtons).toHaveCount(3);
+  for (let index = 0; index < 3; index += 1) {
+    const box = await tourButtons.nth(index).boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.width).toBeGreaterThanOrEqual(44);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  }
+
+  if (browserName === 'chromium') {
+    const results = await new AxeBuilder({ page }).analyze();
+    const blocking = results.violations.filter(
+      (violation) =>
+        violation.impact === 'serious' || violation.impact === 'critical',
+    );
+    expect(blocking).toEqual([]);
+  }
+
+  await page.keyboard.press('ArrowRight');
+  await expect(dialog).toHaveAccessibleName('Choose an optimizer');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await expect(dialog).toHaveAccessibleName('Set the learning rate');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await expect(dialog).toHaveAccessibleName('Run the experiment');
+  await dialog.getByRole('button', { name: 'Next' }).click();
+  await expect(dialog).toHaveAccessibleName('Review retained history');
+  await expect(page.locator('[data-tour="scrubber"]'))
+    .toHaveClass(/driver-active-element/);
+
+  await dialog.getByRole('button', { name: 'Done' }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  expect(await page.evaluate(() => window.localStorage.length)).toBe(0);
+});
+
+for (const viewport of [
+  { width: 375, height: 667 },
+  { width: 812, height: 375 },
+]) {
+  test(`keeps the guided tour bounded and tab-aware at ${viewport.width}x${viewport.height}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    if (viewport.width === 375) {
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+    }
+    await openReadyApp(page);
+
+    const trigger = page.getByRole('button', { name: 'Guided run' });
+    const dialog = page.getByRole('dialog');
+    const setupTab = page.getByRole('tab', { name: 'Setup' });
+    const playbackTab = page.getByRole('tab', { name: 'Playback' });
+
+    await trigger.click();
+    await expect(dialog).toHaveAccessibleName('Choose a landscape');
+    if (viewport.width === 375) {
+      await expect(page.locator('body')).toHaveClass(/driver-simple/);
+      await expect(page.locator('body')).not.toHaveClass(/driver-fade/);
+    }
+
+    for (const name of [
+      'Choose an optimizer',
+      'Set the learning rate',
+      'Run the experiment',
+    ]) {
+      await dialog.getByRole('button', { name: 'Next' }).click();
+      await expect(dialog).toHaveAccessibleName(name);
+    }
+
+    await expect(page.locator('[data-tour="transport"]'))
+      .toHaveClass(/driver-active-element/);
+    await dialog.getByRole('button', { name: 'Next' }).click();
+    await expect(playbackTab).toHaveAttribute('aria-selected', 'true');
+    await expect(dialog).toHaveAccessibleName('Review retained history');
+    const scrubber = page.locator('[data-tour="scrubber"]');
+    await expect(scrubber).toHaveClass(/driver-active-element/);
+    await expectLocatorInsideViewport(page, scrubber);
+    await expectLocatorInsideViewport(page, dialog);
+
+    const visibleButtons = dialog.getByRole('button');
+    for (let index = 0; index < await visibleButtons.count(); index += 1) {
+      const box = await visibleButtons.nth(index).boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.width).toBeGreaterThanOrEqual(44);
+      expect(box!.height).toBeGreaterThanOrEqual(44);
+    }
+
+    await dialog.getByRole('button', { name: 'Previous' }).click();
+    await expect(dialog).toHaveAccessibleName('Run the experiment');
+    await dialog.getByRole('button', { name: 'Previous' }).click();
+    await expect(setupTab).toHaveAttribute('aria-selected', 'true');
+    await expect(dialog).toHaveAccessibleName('Set the learning rate');
+
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(setupTab).toHaveAttribute('aria-selected', 'true');
+    await expect(trigger).toBeVisible();
+    await expect(trigger).toBeFocused();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth))
+      .toBeLessThanOrEqual(viewport.width);
+  });
+}
 
 test('has no serious mobile accessibility violations across tabs', async ({
   page,
