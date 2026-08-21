@@ -194,6 +194,19 @@ async function expectLabelInsideViewport(page: Page, selector: string) {
   expect(box!.y + box!.height).toBeLessThanOrEqual(viewport!.height);
 }
 
+async function expectLabelInsideScene(page: Page, selector: string) {
+  const [label, scene] = await Promise.all([
+    page.locator(selector).boundingBox(),
+    page.locator('.scene-layer').boundingBox(),
+  ]);
+  expect(label).not.toBeNull();
+  expect(scene).not.toBeNull();
+  expect(label!.x).toBeGreaterThanOrEqual(scene!.x);
+  expect(label!.y).toBeGreaterThanOrEqual(scene!.y);
+  expect(label!.x + label!.width).toBeLessThanOrEqual(scene!.x + scene!.width);
+  expect(label!.y + label!.height).toBeLessThanOrEqual(scene!.y + scene!.height);
+}
+
 async function expectLocatorInsideViewport(page: Page, locator: Locator) {
   const box = await locator.boundingBox();
   const viewport = page.viewportSize();
@@ -310,9 +323,16 @@ for (const viewport of [
     await expect(page.locator('.scene-label-current')).toBeHidden();
     if (viewport.width <= 460 || viewport.height <= 500) {
       await expect(page.locator('.scene-label-goal')).toBeHidden();
+    } else if (viewport.width === 768 && viewport.height === 1024) {
+      await expect(page.locator('.scene-label-goal')).toBeVisible();
+      await expectLabelInsideScene(page, '.scene-label-goal');
     }
 
     await page.getByLabel('Landscape', { exact: true }).selectOption('saddle');
+    if (viewport.width === 768 && viewport.height === 1024) {
+      await expect(page.locator('.scene-label-goal')).toBeVisible();
+      await expectLabelInsideScene(page, '.scene-label-goal');
+    }
     const learningRate = page.getByLabel('Learning rate', { exact: true });
     await learningRate.scrollIntoViewIfNeeded();
     await expect(learningRate).toBeVisible();

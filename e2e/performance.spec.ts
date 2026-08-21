@@ -21,6 +21,9 @@ test('meets the mobile slow-4G readiness SLO', async ({ page, browserName }) => 
     connectionType: 'cellular4g',
   });
 
+  const startupRequests: string[] = [];
+  page.on('request', (request) => startupRequests.push(request.url()));
+
   const startedAt = Date.now();
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await expect(page.getByLabel('Landscape', { exact: true })).toBeEnabled({
@@ -45,4 +48,11 @@ test('meets the mobile slow-4G readiness SLO', async ({ page, browserName }) => 
 
   expect(controlsReadyMs).toBeLessThanOrEqual(CONTROLS_READY_SLO_MS);
   expect(canvasVisibleMs).toBeLessThanOrEqual(CANVAS_VISIBLE_SLO_MS);
+
+  await page.waitForLoadState('networkidle');
+  const hdriRequests = startupRequests.filter((url) =>
+    /\/hdri\/[^/?]+\.hdr(?:[?#]|$)/i.test(url)
+  );
+  expect(hdriRequests, 'mobile startup must not request an HDR environment asset')
+    .toEqual([]);
 });
