@@ -1,5 +1,3 @@
-import animate from 'tailwindcss-animate';
-
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -17,8 +15,17 @@ export default {
       border: 'var(--color-border)',
       'border-strong': 'var(--color-border-strong)',
       text: 'var(--color-text)',
+      'text-soft': 'var(--color-text-soft)',
+      'text-code': 'var(--color-text-code)',
       muted: 'var(--color-muted)',
       dim: 'var(--color-dim)',
+      control: 'var(--color-control)',
+      'control-hover': 'var(--color-control-hover)',
+      'control-active': 'var(--color-control-active)',
+      'control-disabled': 'var(--color-control-disabled)',
+      input: 'var(--color-input)',
+      'input-hover': 'var(--color-input-hover)',
+      'on-accent': 'var(--color-on-accent)',
       cyan: 'var(--color-cyan)',
       'cyan-strong': 'var(--color-cyan-strong)',
       amber: 'var(--color-amber)',
@@ -61,5 +68,5 @@ export default {
       full: '9999px',
     },
   },
-  plugins: [animate],
+  plugins: [],
 };

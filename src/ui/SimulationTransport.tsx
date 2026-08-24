@@ -1,10 +1,12 @@
 import {
   CircleCheck,
   Crosshair,
+  LoaderCircle,
   Pause,
   Play,
   RotateCcw,
   StepForward,
+  TriangleAlert,
 } from 'lucide-react';
 import { useUIStore } from '../state/uiStore';
 import type { GraphicsStatus } from './GraphicsState';
@@ -44,6 +46,7 @@ export function SimulationTransport({
       className="transport"
       role="group"
       aria-label="Simulation controls"
+      aria-busy={graphicsStatus === 'loading'}
       data-tour="transport"
     >
       <button
@@ -53,7 +56,11 @@ export function SimulationTransport({
         disabled={!controlsReady || runTerminal || reviewing}
         onClick={() => setPlaying(!isPlaying)}
       >
-        {runOutcome === 'converged' && !reviewing ? (
+        {graphicsStatus === 'loading' ? (
+          <LoaderCircle className="control-spinner" size={17} aria-hidden="true" />
+        ) : graphicsStatus === 'unavailable' ? (
+          <TriangleAlert size={17} aria-hidden="true" />
+        ) : runOutcome === 'converged' && !reviewing ? (
           <CircleCheck size={17} aria-hidden="true" />
         ) : isPlaying && !reviewing ? (
           <Pause size={17} fill="currentColor" aria-hidden="true" />

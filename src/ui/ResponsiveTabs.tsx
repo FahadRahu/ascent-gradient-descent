@@ -78,7 +78,7 @@ export function ResponsiveTabs({
               'inline-flex min-h-[44px] min-w-0 flex-1 touch-manipulation',
               'items-center justify-center gap-1 border-x-0 border-t-0',
               'border-b-2 bg-transparent px-2 text-label font-semibold',
-              'transition-colors duration-150',
+              'transition-colors duration-150 active:bg-control-active',
               selected
                 ? 'border-cyan text-cyan'
                 : 'border-transparent text-muted hover:text-text',

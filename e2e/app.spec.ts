@@ -230,6 +230,78 @@ test('loads the lesson and advances one optimizer iteration', async ({ page }) =
   expect(errors).toEqual([]);
 });
 
+test('keeps setup usable and reports progress while the scene bundle loads', async ({
+  page,
+}) => {
+  let releaseScene = () => {};
+  const sceneGate = new Promise<void>((resolve) => {
+    releaseScene = resolve;
+  });
+  let sceneRequested = false;
+  await page.route(/\/assets\/Scene-[^/]+\.js(?:\?.*)?$/, async (route) => {
+    sceneRequested = true;
+    await sceneGate;
+    await route.continue();
+  });
+
+  try {
+    await page.goto('/', { waitUntil: 'domcontentloaded' });
+    await expect.poll(() => sceneRequested).toBe(true);
+    await expect(page.locator('.graphics-state-loading'))
+      .toContainText('Preparing the cost landscape');
+
+    const transport = page.getByRole('group', { name: 'Simulation controls' });
+    const primary = page.locator('.primary-action');
+    await expect(transport).toHaveAttribute('aria-busy', 'true');
+    await expect(primary).toContainText('Loading view');
+    await expect(primary.locator('.lucide-loader-circle')).toBeVisible();
+    await expect(primary).toBeDisabled();
+
+    const landscape = page.getByLabel('Landscape', { exact: true });
+    await expect(landscape).toBeEnabled();
+    await landscape.selectOption('matyas');
+    await expect(landscape).toHaveValue('matyas');
+  } finally {
+    releaseScene();
+  }
+
+  await expect(page.getByRole('button', { name: 'Advance one iteration' }))
+    .toBeEnabled({ timeout: 30_000 });
+  await expect(page.locator('.scene-layer canvas')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole('group', { name: 'Simulation controls' }))
+    .toHaveAttribute('aria-busy', 'false');
+});
+
+test('uses tabular numerals for every changing-number surface', async ({ page }) => {
+  await openReadyApp(page);
+  await page.getByRole('button', { name: 'Advance one iteration' }).click();
+
+  for (const selector of [
+    'output',
+    '.retained-window',
+    '#playback-speed',
+    '.chart-summary',
+  ]) {
+    const surfaces = page.locator(selector);
+    expect(await surfaces.count(), `${selector} should match a numeric surface`)
+      .toBeGreaterThan(0);
+    const nonTabular = await surfaces.evaluateAll((elements) =>
+      elements
+        .filter((element) => !getComputedStyle(element).fontVariantNumeric.includes('tabular-nums'))
+        .map((element) => `${element.tagName.toLowerCase()}.${element.className}`),
+    );
+    expect(nonTabular, `${selector} must use tabular numerals`).toEqual([]);
+  }
+
+  await page.getByRole('button', { name: 'Guided run' }).click();
+  const progress = page.locator('.driver-popover-progress-text');
+  await expect(progress).toBeVisible();
+  expect(await progress.evaluate((element) =>
+    getComputedStyle(element).fontVariantNumeric.includes('tabular-nums')
+  )).toBe(true);
+  await page.keyboard.press('Escape');
+});
+
 test('opens the privacy policy directly and returns to the lab', async ({
   page,
   browserName,
@@ -406,6 +478,46 @@ test('supports keyboard navigation across responsive tabs', async ({ page }) => 
   await learnTab.press('Home');
   await expect(setupTab).toBeFocused();
   await expect(setupTab).toHaveAttribute('aria-selected', 'true');
+});
+
+test('shows guide loading feedback while setup controls remain usable', async ({
+  page,
+}) => {
+  let releaseGuide = () => {};
+  const guideGate = new Promise<void>((resolve) => {
+    releaseGuide = resolve;
+  });
+  let guideRequested = false;
+  await page.route(/\/assets\/driver\.js-[^/]+\.js(?:\?.*)?$/, async (route) => {
+    guideRequested = true;
+    await guideGate;
+    await route.continue();
+  });
+  await openReadyApp(page);
+
+  const trigger = page.locator('.guided-run-trigger');
+  await expect(trigger).toHaveAccessibleName('Guided run');
+  try {
+    await trigger.click();
+    await expect.poll(() => guideRequested).toBe(true);
+    await expect(trigger).toHaveAttribute('aria-busy', 'true');
+    await expect(trigger).toContainText('Loading guide');
+    await expect(trigger.locator('.lucide-loader-circle')).toBeVisible();
+    await expect(trigger).toBeDisabled();
+
+    const optimizer = page.getByLabel('Optimizer', { exact: true });
+    await expect(optimizer).toBeEnabled();
+    await optimizer.selectOption('adam');
+    await expect(optimizer).toHaveValue('adam');
+  } finally {
+    releaseGuide();
+  }
+
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toHaveAccessibleName('Choose a landscape');
+  await expect(trigger).toHaveAttribute('aria-busy', 'false');
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
 });
 
 test('runs the opt-in guided tour with keyboard control and focus restoration', async ({

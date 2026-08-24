@@ -30,11 +30,11 @@ const SPEED_OPTIONS = [
 
 const HISTORY_BUTTON_CLASS = [
   'inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded',
-  'border border-border bg-[rgba(255,255,255,0.045)] p-0 text-muted',
+  'border border-border bg-control p-0 text-muted',
   'transition-[transform,border-color,background-color,color] duration-150',
-  'enabled:hover:border-border-strong enabled:hover:bg-[rgba(255,255,255,0.09)]',
-  'enabled:hover:text-text enabled:active:scale-[0.97]',
-  'disabled:text-dim disabled:opacity-[0.42]',
+  'enabled:hover:border-border-strong enabled:hover:bg-control-hover',
+  'enabled:hover:text-text enabled:active:scale-[0.97] enabled:active:bg-control-active',
+  'disabled:bg-control-disabled disabled:text-dim disabled:opacity-[0.58]',
 ].join(' ');
 
 function formatCost(value: number): string {
@@ -218,7 +218,7 @@ export function Scrubber({ graphicsStatus }: { graphicsStatus: GraphicsStatus })
           </h3>
         </div>
         <span
-          className="review-badge shrink-0 rounded-sm border border-amber bg-[rgba(255,185,87,0.08)] px-[6px] py-1 text-[9px] font-bold uppercase tracking-normal text-amber"
+          className="review-badge shrink-0 rounded-sm border border-border-strong bg-control px-[6px] py-1 text-[9px] font-bold uppercase tracking-normal text-muted"
           hidden={mode !== 'review'}
         >
           Review mode
@@ -294,7 +294,7 @@ export function Scrubber({ graphicsStatus }: { graphicsStatus: GraphicsStatus })
       />
       <span
         ref={windowRef}
-        className="retained-window mt-[-5px] block text-[9px] leading-[1.4] text-dim"
+        className="retained-window mt-[-5px] block text-[9px] leading-[1.4] text-dim tabular-nums"
       >
         Retained 0-0 (1 step)
       </span>
@@ -395,7 +395,7 @@ export function Scrubber({ graphicsStatus }: { graphicsStatus: GraphicsStatus })
         </label>
         <select
           id="playback-speed"
-          className="min-h-[44px] min-w-[76px] rounded border border-border-strong bg-panel-solid py-0 pl-[10px] pr-[26px] font-mono text-[10px] text-text"
+          className="min-h-[44px] min-w-[76px] rounded border border-border-strong bg-input py-0 pl-[10px] pr-[26px] font-mono text-[10px] text-text tabular-nums transition-colors enabled:hover:bg-input-hover enabled:active:bg-control-active disabled:border-border disabled:bg-control-disabled disabled:text-dim disabled:opacity-[0.58]"
           value={playbackSpeedMs}
           disabled={!controlsReady}
           onChange={(event) => setPlaybackSpeedMs(Number(event.target.value))}
